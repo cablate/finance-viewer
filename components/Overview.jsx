@@ -1,0 +1,568 @@
+"use client"
+
+import { useCallback, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import {
+  ArrowDownRight,
+  ArrowRight,
+  ArrowUpRight,
+  Briefcase,
+  Landmark,
+  PiggyBank,
+  Receipt,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react"
+
+import {
+  useBalanceHistory,
+  useBreakdown,
+  useSummary,
+  useTransactions,
+} from "@/lib/hooks"
+import { formatDate, formatMonth, formatTWD } from "@/lib/format"
+import DonutChart from "@/components/charts/DonutChart"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
+
+// 從 URL search params 中挑選與資料篩選相關的 key，丟棄 mode/selectedTxnId 等 UI 狀態。
+// 傳給 useSummary / useBreakdown / useTransactions 當查詢字串。
+const BASE_KEYS = [
+  "month",
+  "view",
+  "scope",
+  "category",
+  "owner",
+  "necessity",
+  "search",
+  "sort",
+  "direction",
+]
+
+function pickBaseParams(searchParams) {
+  const sp = new URLSearchParams()
+  for (const k of BASE_KEYS) {
+    const v = searchParams.get(k)
+    if (v) sp.set(k, v)
+  }
+  return sp
+}
+
+export default function Overview() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // 以 URL search params 為單一真相來源；切換時 router.push 更新 query。
+  const baseParams = useMemo(() => pickBaseParams(searchParams), [searchParams])
+  const baseString = baseParams.toString()
+
+  const breakdownParams = useMemo(() => {
+    const sp = new URLSearchParams(baseString)
+    sp.set("dimension", "category")
+    return sp.toString()
+  }, [baseString])
+
+  const txParams = useMemo(() => {
+    const sp = new URLSearchParams(baseString)
+    sp.set("limit", "5")
+    sp.set("sort", "date")
+    sp.set("direction", "desc")
+    return sp.toString()
+  }, [baseString])
+
+  const {
+    data: summary,
+    loading: summaryLoading,
+    error: summaryError,
+  } = useSummary(baseString)
+
+  const {
+    data: breakdown,
+    loading: breakdownLoading,
+  } = useBreakdown(breakdownParams)
+
+  const { data: balanceHistory, loading: balanceLoading } = useBalanceHistory()
+
+  const {
+    data: txData,
+    loading: txLoading,
+  } = useTransactions(txParams)
+
+  // 下鑽：以目前 query 為基底，套用 overrides 後切換 mode。保留 month/scope 等篩選。
+  const drill = useCallback(
+    (overrides = {}) => {
+      const sp = new URLSearchParams(searchParams.toString())
+      for (const [k, v] of Object.entries(overrides)) {
+        if (v === null || v === undefined || v === "") sp.delete(k)
+        else sp.set(k, v)
+      }
+      if (!sp.get("mode")) sp.set("mode", "transactions")
+      router.push(`?${sp.toString()}`)
+    },
+    [router, searchParams],
+  )
+
+  const drillCategory = useCallback(
+    (label) => drill({ mode: "transactions", category: label, search: "" }),
+    [drill],
+  )
+
+  const monthLabel = summary?.selectedMonth
+    ? formatMonth(summary.selectedMonth)
+    : "本月"
+
+  const netCash = Number(summary?.netCashMovement ?? 0)
+  const netCashPositive = netCash > 0
+  const netCashNegative = netCash < 0
+
+  // balanceHistory 取最新兩筆做月變動 Badge，讓 useBalanceHistory 有實際用途。
+  const latestBalanceEntry =
+    balanceHistory && balanceHistory.length > 0
+      ? balanceHistory[balanceHistory.length - 1]
+      : null
+  const prevBalanceEntry =
+    balanceHistory && balanceHistory.length > 1
+      ? balanceHistory[balanceHistory.length - 2]
+      : null
+  const balanceDelta =
+    latestBalanceEntry && prevBalanceEntry
+      ? Number(latestBalanceEntry.balance) - Number(prevBalanceEntry.balance)
+      : null
+
+  if (summaryLoading && !summary) return <OverviewSkeleton />
+
+  if (summaryError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>無法載入概觀</AlertTitle>
+        <AlertDescription>
+          {summaryError?.message || "請稍後再試。"}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  const txRows = txData?.rows ?? []
+  const incomeItems = (breakdown ?? []).filter((b) => Number(b.inflow) > 0)
+  const spendItems = (breakdown ?? []).filter((b) => Number(b.spend) > 0)
+  const donutData = spendItems
+    .slice(0, 8)
+    .map((b) => ({ label: b.label, value: Number(b.spend) }))
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Hero 淨現金流 */}
+      <Card>
+        <CardHeader>
+          <CardDescription>{monthLabel} 淨現金流</CardDescription>
+          <CardTitle className="text-3xl">{formatTWD(netCash)}</CardTitle>
+          <CardAction>
+            {netCashPositive ? (
+              <Badge className="border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <ArrowUpRight className="h-3 w-3" />
+                流入大於支出
+              </Badge>
+            ) : netCashNegative ? (
+              <Badge variant="destructive">
+                <ArrowDownRight className="h-3 w-3" />
+                支出超過流入
+              </Badge>
+            ) : (
+              <Badge variant="secondary">收支平衡</Badge>
+            )}
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <span>
+              流入{" "}
+              <span className="font-medium text-foreground">
+                {formatTWD(summary?.inflow)}
+              </span>
+            </span>
+            <span>
+              流出{" "}
+              <span className="font-medium text-foreground">
+                {formatTWD(summary?.outflow)}
+              </span>
+            </span>
+            <span>
+              交易筆數{" "}
+              <span className="font-medium text-foreground">
+                {summary?.rows ?? 0}
+              </span>
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Metric cards：每卡可點下鑽到 transactions mode 帶對應 scope/view */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <MetricCard
+          label="實際支出"
+          value={formatTWD(summary?.actualSpend)}
+          icon={<Receipt className="h-4 w-4" />}
+          loading={summaryLoading}
+          onClick={() => drill({ mode: "transactions" })}
+        />
+        <MetricCard
+          label="個人支出"
+          value={formatTWD(summary?.personalSpend)}
+          icon={<Users className="h-4 w-4" />}
+          loading={summaryLoading}
+          onClick={() => drill({ mode: "transactions", scope: "personal" })}
+        />
+        <MetricCard
+          label="事業支出"
+          value={formatTWD(summary?.businessSpend)}
+          icon={<Briefcase className="h-4 w-4" />}
+          loading={summaryLoading}
+          onClick={() => drill({ mode: "transactions", scope: "business" })}
+        />
+        <MetricCard
+          label="支出後結餘"
+          value={formatTWD(summary?.moneyLeftAfterSpend)}
+          icon={<PiggyBank className="h-4 w-4" />}
+          loading={summaryLoading}
+          onClick={() => drill({ mode: "transactions" })}
+        />
+        <MetricCard
+          label="最新帳戶餘額"
+          value={
+            summary?.latestBankBalance
+              ? formatTWD(summary.latestBankBalance.balance)
+              : "—"
+          }
+          hint={
+            summary?.latestBankBalance
+              ? `${formatDate(summary.latestBankBalance.date)} · ${summary.latestBankBalance.name}`
+              : null
+          }
+          icon={<Landmark className="h-4 w-4" />}
+          loading={summaryLoading}
+          onClick={() => drill({ mode: "transactions", view: "bank" })}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* 支出分類 DonutChart */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>支出分類</CardTitle>
+            <CardDescription>依類別分布</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {breakdownLoading && !breakdown ? (
+              <Skeleton className="h-[260px] w-full rounded-lg" />
+            ) : donutData.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Wallet />
+                  </EmptyMedia>
+                  <EmptyTitle>本月無支出</EmptyTitle>
+                  <EmptyDescription>
+                    當前篩選條件下沒有可顯示的支出分類。
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <DonutChart
+                  data={donutData}
+                  ariaLabel={`${monthLabel} 支出分類分布`}
+                />
+                <ul className="flex flex-col gap-1.5 text-sm">
+                  {donutData.map((item) => (
+                    <li key={item.label}>
+                      <button
+                        type="button"
+                        onClick={() => drillCategory(item.label)}
+                        className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1 text-left hover:bg-muted"
+                      >
+                        <span className="truncate text-foreground">
+                          {item.label}
+                        </span>
+                        <span className="flex items-center gap-2 text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {formatTWD(item.value)}
+                          </span>
+                          <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 收入來源 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>收入來源</CardTitle>
+            <CardDescription>依類別分布</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {breakdownLoading && !breakdown ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full rounded-md" />
+                ))}
+              </div>
+            ) : incomeItems.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <TrendingUp />
+                  </EmptyMedia>
+                  <EmptyTitle>無收入紀錄</EmptyTitle>
+                  <EmptyDescription>
+                    本月目前沒有流入項目。
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {incomeItems.map((item) => (
+                  <li key={item.label}>
+                    <button
+                      type="button"
+                      onClick={() => drillCategory(item.label)}
+                      className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2 py-1 text-left hover:bg-muted"
+                    >
+                      <span className="truncate text-foreground">
+                        {item.label}
+                      </span>
+                      <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                        +{formatTWD(item.inflow)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* 近期交易 */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>近期交易</CardTitle>
+            <CardDescription>最新 5 筆</CardDescription>
+            <CardAction>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => drill({ mode: "transactions" })}
+              >
+                查看全部
+                <ArrowRight />
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {txLoading && !txData ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full rounded-md" />
+                ))}
+              </div>
+            ) : txRows.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Receipt />
+                  </EmptyMedia>
+                  <EmptyTitle>沒有交易</EmptyTitle>
+                  <EmptyDescription>
+                    當前篩選條件下沒有交易資料。
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <ul className="flex flex-col divide-y divide-border">
+                {txRows.map((row) => {
+                  const inflow = Number(row.inflow) || 0
+                  const outflow = Number(row.outflow) || 0
+                  const isIncome = inflow > 0
+                  return (
+                    <li key={row.id} className="first:pt-0 last:pb-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          drill({
+                            mode: "transactions",
+                            category: "",
+                            search: row.name,
+                          })
+                        }
+                        className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-muted/60"
+                      >
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {row.name || "（未命名）"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(row.transaction_date)}
+                            {" · "}
+                            {row.category_primary || "未分類"}
+                          </span>
+                        </div>
+                        <span
+                          className={
+                            isIncome
+                              ? "text-sm font-medium text-emerald-700 dark:text-emerald-300"
+                              : "text-sm font-medium text-foreground"
+                          }
+                        >
+                          {isIncome
+                            ? `+${formatTWD(inflow)}`
+                            : `-${formatTWD(outflow)}`}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 歷月帳戶餘額（useBalanceHistory） */}
+        <Card>
+          <CardHeader>
+            <CardTitle>歷月帳戶餘額</CardTitle>
+            <CardDescription>
+              {balanceDelta === null ? (
+                "帳戶餘額軌跡"
+              ) : balanceDelta >= 0 ? (
+                <Badge className="border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                  <ArrowUpRight className="h-3 w-3" />
+                  較上月 +{formatTWD(balanceDelta)}
+                </Badge>
+              ) : (
+                <Badge variant="destructive">
+                  <ArrowDownRight className="h-3 w-3" />
+                  較上月 -{formatTWD(Math.abs(balanceDelta))}
+                </Badge>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {balanceLoading && !balanceHistory ? (
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full rounded-md" />
+                ))}
+              </div>
+            ) : !balanceHistory || balanceHistory.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Landmark />
+                  </EmptyMedia>
+                  <EmptyTitle>尚無餘額資料</EmptyTitle>
+                  <EmptyDescription>
+                    尚未匯入帳戶對帳紀錄。
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {balanceHistory
+                  .slice(-4)
+                  .slice()
+                  .reverse()
+                  .map((entry) => (
+                    <li
+                      key={entry.month}
+                      className="flex items-center justify-between gap-2 rounded-md px-2 py-1"
+                    >
+                      <span className="text-muted-foreground">
+                        {formatMonth(entry.month)}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {formatTWD(entry.balance)}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+function MetricCard({ label, value, hint, icon, loading, onClick }) {
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className="cursor-pointer transition-shadow hover:ring-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={`${label}，點擊查看詳情`}
+    >
+      <CardHeader>
+        <CardDescription className="flex items-center gap-1.5">
+          {icon}
+          {label}
+        </CardDescription>
+        <CardTitle className="text-2xl">
+          {loading ? <Skeleton className="h-7 w-24" /> : value}
+        </CardTitle>
+      </CardHeader>
+      {hint ? (
+        <CardContent>
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        </CardContent>
+      ) : null}
+    </Card>
+  )
+}
+
+function OverviewSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <Skeleton className="h-32 w-full rounded-xl" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 w-full rounded-xl" />
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Skeleton className="h-80 w-full rounded-xl lg:col-span-2" />
+        <Skeleton className="h-80 w-full rounded-xl" />
+      </div>
+    </div>
+  )
+}

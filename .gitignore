@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# production
+build/
+
+# === 機敏：真實財務 DB 絕不追蹤 ===
+data/*.sqlite
+data/*.sqlite-*
+data/*.sqlite.bak*
+data/*.bak*
+
+# imports (uploaded CSV may contain real statements)
+uploads/
+
+# logs / pid
+*.log
+server.pid
+
+# screenshots may contain real transaction data — don't commit
+*.png
+
+# misc
+.DS_Store
+Thumbs.db
+.playwright-mcp/
+.env*
+
+# internal docs (contain personal context / local paths, not for public)
+AUDIT-*.md
+DESIGN.md
+DEV-JOURNAL.md
+.vscode/
+.idea/
