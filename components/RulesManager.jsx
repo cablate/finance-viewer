@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react"
 import {
   ListChecks, AlertTriangle, RefreshCw, Plus, Pencil, Trash2, Search, Sparkles,
 } from "lucide-react"
-import { useRules, useCreateRule, useUpdateRule, useDeleteRule, useBootstrapRules } from "@/lib/hooks"
+import { useRules, useCreateRule, useUpdateRule, useDeleteRule } from "@/lib/hooks"
 import { confidenceTier, LOW_CONFIDENCE_THRESHOLD } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -262,7 +262,6 @@ export default function RulesManager() {
   }, [filter])
 
   const { data, loading, error, refetch } = useRules(params)
-  const bootstrapRules = useBootstrapRules()
   const createRule = useCreateRule()
   const updateRule = useUpdateRule()
   const deleteRule = useDeleteRule()
@@ -358,13 +357,8 @@ export default function RulesManager() {
               <EmptyDescription>
                 {filter.q || filter.enabled !== "all" || filter.lowOnly
                   ? "調整篩選條件試試。"
-                  : "AI 分析帳單後會透過 API 寫入規則；或從已分類的歷史一鍵建立："}
+                  : "AI 分析帳單後會透過 API 寫入規則（見 AGENTS.md）；或按「新增規則」手動建立。"}
               </EmptyDescription>
-              {!(filter.q || filter.enabled !== "all" || filter.lowOnly) ? (
-                <Button type="button" size="sm" onClick={async () => { try { await bootstrapRules(); refetch(); } catch {} }}>
-                  <Sparkles /> 從歷史建議建立規則
-                </Button>
-              ) : null}
             </EmptyHeader>
           </Empty>
         ) : (

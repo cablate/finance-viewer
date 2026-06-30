@@ -8,12 +8,11 @@ import {
   CalendarDays,
   CheckCircle2,
   Inbox,
-  Lightbulb,
   ListChecks,
   RefreshCw,
 } from "lucide-react"
 
-import { useReviewQueue, usePatchTxn, useBatchCorrect } from "@/lib/hooks"
+import { useReviewQueue } from "@/lib/hooks"
 import { formatDate, formatTWD } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
@@ -39,7 +38,7 @@ import {
   AlertAction,
 } from "@/components/ui/alert"
 
-// 與 lib/queries.js getReviewQueue 的 SQL 一致的「待確認」判定值。
+// 與 lib/queries/review.js getReviewQueue 的 SQL 一致的「待確認」判定值。
 const UNCERTAIN_OWNER = "待確認"
 const UNCERTAIN_CATEGORY = "待確認"
 const UNCERTAIN_NECESSITY = "需確認"
@@ -47,19 +46,12 @@ const UNCERTAIN_NECESSITY = "需確認"
 // 找出某筆 sample 哪些欄位落到「待確認」狀態，用來顯示原因 Badge。
 function getReasons(sample) {
   const reasons = []
-  if (sample?.owner_primary === UNCERTAIN_OWNER) {
-    reasons.push({ key: "owner", label: "歸屬待確認" })
-  }
-  if (sample?.category_primary === UNCERTAIN_CATEGORY) {
-    reasons.push({ key: "category", label: "分類待確認" })
-  }
-  if (sample?.necessity === UNCERTAIN_NECESSITY) {
-    reasons.push({ key: "necessity", label: "必要性需確認" })
-  }
+  if (sample?.owner_primary === UNCERTAIN_OWNER) reasons.push({ key: "owner", label: "歸屬待確認" })
+  if (sample?.category_primary === UNCERTAIN_CATEGORY) reasons.push({ key: "category", label: "分類待確認" })
+  if (sample?.necessity === UNCERTAIN_NECESSITY) reasons.push({ key: "necessity", label: "必要性需確認" })
   return reasons
 }
 
-// 兩張大數字卡的骨架，載入時復用。
 function StatCardSkeleton() {
   return (
     <Card>
@@ -92,39 +84,8 @@ export default function ReviewQueue() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data, loading, error, refetch } = useReviewQueue()
-  // 注意：所有 hook 必須在任何 early return（loading/error/allClear）之前呼叫，
-  // 否則違反 Rules of Hooks（hook 順序不能依條件改變）。
-  const patchTxn = usePatchTxn()
-  const batchCorrect = useBatchCorrect()
-  // 採納單筆歷史建議（一鍵 PATCH，省逐 select）
-  const handleAccept = useCallback(async (sample) => {
-    if (!sample.suggestion) return
-    const s = sample.suggestion
-    const body = {}
-    if (s.owner_value) body.owner_primary = s.owner_value
-    if (s.category_value) body.category_primary = s.category_value
-    if (s.necessity_value) body.necessity = s.necessity_value
-    await patchTxn(sample.id, body)
-    refetch()
-  }, [patchTxn, refetch])
-  // 批次採納所有有建議的樣本
-  const handleAcceptAll = useCallback(async () => {
-    const all = Array.isArray(data?.samples) ? data.samples : []
-    const targets = all.filter((s) => s.suggestion)
-    if (targets.length === 0) return
-    const corrections = targets.map((s) => {
-      const c = { id: s.id }
-      if (s.suggestion.owner_value) c.owner_primary = s.suggestion.owner_value
-      if (s.suggestion.category_value) c.category_primary = s.suggestion.category_value
-      if (s.suggestion.necessity_value) c.necessity = s.suggestion.necessity_value
-      return c
-    })
-    await batchCorrect({ corrections })
-    refetch()
-  }, [data, batchCorrect, refetch])
 
   // 下鑽到 transactions mode 並以 view=review 篩選 review 佇列。
-  // 保留現有 month / scope 作為脈絡，清掉其餘篩選以免看不到 review 項。
   const buildDrillUrl = useCallback(() => {
     const next = new URLSearchParams()
     const month = searchParams.get("month")
@@ -141,7 +102,6 @@ export default function ReviewQueue() {
     router.push(buildDrillUrl())
   }, [router, buildDrillUrl])
 
-  // ---- loading ----
   if (loading) {
     return (
       <section className="flex flex-col gap-6" aria-busy="true">
@@ -158,7 +118,6 @@ export default function ReviewQueue() {
     )
   }
 
-  // ---- error ----
   if (error) {
     return (
       <Alert variant="destructive">
@@ -168,12 +127,7 @@ export default function ReviewQueue() {
           {error?.message || "請稍後再試，或點重試重新取得資料。"}
         </AlertDescription>
         <AlertAction>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => refetch()}
-          >
+          <Button type="button" size="sm" variant="outline" onClick={() => refetch()}>
             <RefreshCw />
             重試
           </Button>
@@ -187,7 +141,6 @@ export default function ReviewQueue() {
   const samples = Array.isArray(data?.samples) ? data.samples : []
   const allClear = uncertainCount === 0 && unreviewedCount === 0
 
-  // ---- empty ----
   if (allClear) {
     return (
       <Empty>
@@ -206,7 +159,6 @@ export default function ReviewQueue() {
 
   return (
     <section className="flex flex-col gap-6">
-      {/* 兩張大數字卡：補前端過去未消費 /api/review-queue 的 UI 落差 */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
@@ -239,7 +191,6 @@ export default function ReviewQueue() {
         </Card>
       </div>
 
-      {/* samples 列表 */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
@@ -249,23 +200,16 @@ export default function ReviewQueue() {
               （最多 {samples.length} 筆）
             </span>
           </h3>
-          <div className="flex items-center gap-3">
-            {samples.some((s) => s.suggestion) && (
-              <Button type="button" size="sm" variant="outline" onClick={handleAcceptAll}>
-                <Lightbulb /> 全部採納建議
-              </Button>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant="link"
-              className="h-auto p-0"
-              onClick={handleDrill}
-            >
-              前往審核
-              <ArrowRight />
-            </Button>
-          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="link"
+            className="h-auto p-0"
+            onClick={handleDrill}
+          >
+            前往審核
+            <ArrowRight />
+          </Button>
         </div>
 
         {samples.length === 0 ? (
@@ -328,17 +272,6 @@ export default function ReviewQueue() {
                       />
                     </span>
                   </Button>
-                  {sample.suggestion && (
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-xs">
-                      <Lightbulb className="size-3.5 shrink-0 text-success" aria-hidden="true" />
-                      <span className="text-muted-foreground">建議：</span>
-                      {sample.suggestion.owner_value && <Badge variant="outline" className="font-normal">{sample.suggestion.owner_value}</Badge>}
-                      {sample.suggestion.category_value && <Badge variant="outline" className="font-normal">{sample.suggestion.category_value}</Badge>}
-                      {sample.suggestion.necessity_value && <Badge variant="outline" className="font-normal">{sample.suggestion.necessity_value}</Badge>}
-                      <span className="text-muted-foreground">（{sample.suggestion.sample_count} 筆同名歷史）</span>
-                      <Button type="button" size="sm" variant="outline" className="ml-auto h-7 px-2" onClick={() => handleAccept(sample)}>採納</Button>
-                    </div>
-                  )}
                 </li>
               )
             })}
