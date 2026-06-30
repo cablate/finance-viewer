@@ -130,6 +130,8 @@ function SummaryTable({ rows, activeKey, onPick }) {
 function RowsTable({ rows, page, totalPages, onPageChange }) {
   return (
     <div className="space-y-3">
+      {/* 桌面表格（md 以上） */}
+      <div className="hidden md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -161,6 +163,26 @@ function RowsTable({ rows, page, totalPages, onPageChange }) {
           ))}
         </TableBody>
       </Table>
+      </div>
+
+      {/* 手機卡片（md 以下） */}
+      <div className="space-y-2 md:hidden">
+        {rows.map((row) => (
+          <div key={row.id} className="rounded-md border p-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="font-medium">{fieldLabel(row.field_name)}</span>
+              <Badge variant="secondary" className="font-normal">{displayValue(row.new_value)}</Badge>
+            </div>
+            <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              <div>舊值：{displayValue(row.old_value)}</div>
+              <div className="whitespace-nowrap">{formatDate(row.corrected_at)}</div>
+              <div className="truncate" title={row.transaction_name || `#${row.transaction_id}`}>
+                {row.transaction_name || `#${row.transaction_id}`}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
       {totalPages > 1 && (
         <Pagination className="mx-0 justify-end">
           <PaginationContent>

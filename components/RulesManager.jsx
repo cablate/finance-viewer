@@ -10,7 +10,7 @@ import {
   ListChecks, AlertTriangle, RefreshCw, Plus, Pencil, Trash2, Search, Sparkles,
 } from "lucide-react"
 import { useRules, useCreateRule, useUpdateRule, useDeleteRule } from "@/lib/hooks"
-import { confidenceTier } from "@/lib/constants"
+import { confidenceTier, LOW_CONFIDENCE_THRESHOLD } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -255,7 +255,7 @@ export default function RulesManager() {
 
   const params = useMemo(() => {
     const sp = new URLSearchParams()
-    if (filter.lowOnly) sp.set("maxConfidence", "0.5")
+    if (filter.lowOnly) sp.set("maxConfidence", String(LOW_CONFIDENCE_THRESHOLD))
     if (filter.enabled !== "all") sp.set("enabled", filter.enabled)
     if (filter.q.trim()) sp.set("q", filter.q.trim())
     return sp.toString()
@@ -267,7 +267,7 @@ export default function RulesManager() {
   const deleteRule = useDeleteRule()
 
   const rules = data?.rules || []
-  const lowCount = rules.filter((r) => r.confidence < 0.5).length
+  const lowCount = rules.filter((r) => r.confidence < LOW_CONFIDENCE_THRESHOLD).length
 
   function openNew() { setEditing(null); setDialogOpen(true) }
   function openEdit(rule) { setEditing(rule); setDialogOpen(true) }
@@ -334,7 +334,7 @@ export default function RulesManager() {
             aria-label="僅顯示低信心規則"
             onClick={() => setFilter((f) => ({ ...f, lowOnly: !f.lowOnly }))}
           >
-            <Sparkles className="mr-1 h-4 w-4" /> 低信心（&lt;0.5）
+            <Sparkles className="mr-1 h-4 w-4" /> 低信心（&lt;{LOW_CONFIDENCE_THRESHOLD}）
           </Button>
           {!loading && !error && (
             <span className="ml-auto text-xs text-muted-foreground">

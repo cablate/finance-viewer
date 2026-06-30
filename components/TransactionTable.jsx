@@ -31,7 +31,7 @@ import {
 import { cn } from "@/lib/utils"
 import { formatTWD, formatDate } from "@/lib/format"
 import { OWNER_OPTIONS, NECESSITY_OPTIONS, EDITABLE_FIELDS, EDITABLE_LABELS } from "@/lib/constants"
-import { useMeta, useTransactions, usePatchTxn, useBatchCorrect } from "@/lib/hooks"
+import { useMeta, useTransactions, usePatchTxn, useBatchCorrect, useReviewTxns } from "@/lib/hooks"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -551,6 +551,20 @@ export default function TransactionTable() {
     refetch()
   }, [refetch])
 
+  // 單筆「確認無誤」：標已審（reviewed=1）後 refetch
+  const reviewTxns = useReviewTxns()
+  const handleConfirm = useCallback(
+    async (id) => {
+      try {
+        await reviewTxns([id])
+        refetch()
+      } catch {
+        // 失敗 toast 已由 useReviewTxns 處理
+      }
+    },
+    [reviewTxns, refetch],
+  )
+
   const gotoPage = useCallback(
     (p) => {
       const safe = Math.min(Math.max(1, p), totalPages)
@@ -608,6 +622,8 @@ export default function TransactionTable() {
         </Empty>
       ) : (
         <>
+          {/* 桌面表格（md 以上）；手機改用下方卡片版型 */}
+          <div className="hidden md:block">
           <ScrollArea className="rounded-md border">
             <Table>
               <TableHeader>
@@ -661,6 +677,17 @@ export default function TransactionTable() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <SourceBadge row={row} />
+                            {!row.reviewed ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                aria-label={`確認 ${row.name} 分類無誤`}
+                                onClick={() => handleConfirm(row.id)}
+                              >
+                                <CheckIcon /> 確認
+                              </Button>
+                            ) : null}
                             <Button
                               type="button"
                               variant={open ? "secondary" : "ghost"}
@@ -692,6 +719,75 @@ export default function TransactionTable() {
               </TableBody>
             </Table>
           </ScrollArea>
+          </div>
+
+          {/* 手機卡片（md 以下）：鏡射 RulesManager 的 space-y-2 md:hidden 慣例 */}
+          <div className="space-y-2 md:hidden">
+            {rows.map((row) => {
+              const open = selectedTxnId === row.id
+              const checked = batchIds.includes(row.id)
+              return (
+                <div key={row.id} className="rounded-md border p-3">
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => toggleOne(row.id, Boolean(v))}
+                      aria-label={`選取 ${row.name}`}
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate font-medium" title={row.name}>{row.name}</span>
+                        <AmountCell row={row} />
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="whitespace-nowrap">{formatDate(row.transaction_date)}</span>
+                        <SourceBadge row={row} />
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <FieldBadge value={row.owner_primary} />
+                        <FieldBadge value={row.category_primary} />
+                        <NecessityBadge value={row.necessity} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex justify-end gap-2">
+                    {!row.reviewed ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label={`確認 ${row.name} 分類無誤`}
+                        onClick={() => handleConfirm(row.id)}
+                      >
+                        <CheckIcon /> 確認
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant={open ? "secondary" : "ghost"}
+                      size="sm"
+                      aria-expanded={open}
+                      aria-label={open ? `收起 ${row.name} 的編輯` : `展開 ${row.name} 的編輯`}
+                      onClick={() => setSelectedTxnId(open ? null : row.id)}
+                    >
+                      {open ? "收起" : "編輯"}
+                    </Button>
+                  </div>
+                  {open ? (
+                    <div className="mt-2 border-t pt-2">
+                      <TransactionEditPanel
+                        row={row}
+                        categoryOptions={categoryOptions}
+                        onSaved={handleSaved}
+                        onClose={() => setSelectedTxnId(null)}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
+          </div>
 
           {/* 分頁 + 計數 */}
           <div className="flex flex-col items-center gap-3">
