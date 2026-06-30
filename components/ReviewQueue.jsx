@@ -13,7 +13,7 @@ import {
   RefreshCw,
 } from "lucide-react"
 
-import { useReviewQueue, useReviewTxns, usePatchTxn, useBatchCorrect } from "@/lib/hooks"
+import { useReviewQueue, usePatchTxn, useBatchCorrect } from "@/lib/hooks"
 import { formatDate, formatTWD } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
@@ -94,15 +94,8 @@ export default function ReviewQueue() {
   const { data, loading, error, refetch } = useReviewQueue()
   // 注意：所有 hook 必須在任何 early return（loading/error/allClear）之前呼叫，
   // 否則違反 Rules of Hooks（hook 順序不能依條件改變）。
-  const reviewTxns = useReviewTxns()
   const patchTxn = usePatchTxn()
   const batchCorrect = useBatchCorrect()
-  const ruleApplied = Array.isArray(data?.rule_applied) ? data.rule_applied : []
-  const handleApproveAll = useCallback(async () => {
-    if (ruleApplied.length === 0) return
-    await reviewTxns(ruleApplied.map((r) => r.id))
-    refetch()
-  }, [ruleApplied, reviewTxns, refetch])
   // 採納單筆歷史建議（一鍵 PATCH，省逐 select）
   const handleAccept = useCallback(async (sample) => {
     if (!sample.suggestion) return
@@ -192,8 +185,7 @@ export default function ReviewQueue() {
   const uncertainCount = Number(data?.uncertain_count) || 0
   const unreviewedCount = Number(data?.unreviewed_count) || 0
   const samples = Array.isArray(data?.samples) ? data.samples : []
-  const ruleAppliedCount = Number(data?.rule_applied_count) || 0
-  const allClear = uncertainCount === 0 && unreviewedCount === 0 && ruleAppliedCount === 0
+  const allClear = uncertainCount === 0 && unreviewedCount === 0
 
   // ---- empty ----
   if (allClear) {
@@ -241,7 +233,7 @@ export default function ReviewQueue() {
               {unreviewedCount.toLocaleString()}
             </CardTitle>
             <CardDescription>
-              待分析或規則套用未確認的交易筆數
+              待分析（尚未分類）的交易筆數
             </CardDescription>
           </CardHeader>
         </Card>
@@ -354,44 +346,6 @@ export default function ReviewQueue() {
         )}
       </div>
 
-      {/* 規則自動套用（待確認）：人類認可 = 正向回饋（區分「看過」與「沒看過」） */}
-      {ruleAppliedCount > 0 && (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <ListChecks className="size-4" aria-hidden="true" />
-              規則自動套用
-              <span className="text-muted-foreground">（待你確認 {ruleAppliedCount} 筆）</span>
-            </h3>
-            <Button type="button" size="sm" onClick={handleApproveAll}>
-              全部認可
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            這些交易已由規則自動分類。確認無誤請按「全部認可」（標記為已審，作為規則的正向回饋）。
-          </p>
-          <ul className="flex flex-col gap-2">
-            {ruleApplied.map((sample) => (
-              <li key={sample.id} className="rounded-lg border border-border bg-card px-4 py-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate font-medium text-foreground">{sample.name}</div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      <Badge variant="secondary" className="font-normal">{sample.category_primary}</Badge>
-                      <Badge variant="outline" className="font-normal">{sample.owner_primary}</Badge>
-                      <Badge variant="outline" className="font-normal">{sample.necessity}</Badge>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right text-muted-foreground">
-                    <div className="text-xs">{formatDate(sample.transaction_date)}</div>
-                    <div className="tabular-nums">{formatTWD(sample.amount)}</div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </section>
   )
 }
