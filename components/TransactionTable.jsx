@@ -30,7 +30,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { formatTWD, formatDate } from "@/lib/format"
-import { OWNER_OPTIONS, NECESSITY_OPTIONS, EDITABLE_FIELDS, EDITABLE_LABELS, STANDARD_CATEGORIES } from "@/lib/constants"
+import { EDITABLE_FIELDS, EDITABLE_LABELS, STANDARD_CATEGORIES } from "@/lib/constants"
 import { useMeta, useTransactions, usePatchTxn, useBatchCorrect, useReviewTxns } from "@/lib/hooks"
 
 import { Button } from "@/components/ui/button"
@@ -83,9 +83,7 @@ const SORT_COLUMNS = [
   { key: "name", label: "名稱", align: "left", sortable: false },
   { key: "amount", label: "金額", align: "right" },
   { key: "outflow", label: "支出", align: "right" },
-  { key: "owner", label: "歸屬", align: "left" },
   { key: "category", label: "分類", align: "left" },
-  { key: "necessity", label: "必要性", align: "left" },
 ]
 
 // 將 URL search params 更新推送進 router（值為 null/空字串時移除該 key）。
@@ -206,9 +204,7 @@ function SortButton({ column, currentSort, currentDir, onSort }) {
 function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
   const patchTxn = usePatchTxn()
   const [draft, setDraft] = useState({
-    owner_primary: row.owner_primary ?? "",
     category_primary: row.category_primary ?? "",
-    necessity: row.necessity ?? "",
     memo: row.memo ?? "",
   })
   const [saving, setSaving] = useState(false)
@@ -239,48 +235,18 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`edit-owner-${row.id}`}>歸屬</Label>
-          <Select value={draft.owner_primary} onValueChange={set("owner_primary")}>
-            <SelectTrigger id={`edit-owner-${row.id}`} className="w-full">
-              <SelectValue placeholder="選擇歸屬" />
-            </SelectTrigger>
-            <SelectContent>
-              {OWNER_OPTIONS.map((o) => (
-                <SelectItem key={o} value={o}>{o}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`edit-category-${row.id}`}>分類</Label>
-          <Select value={draft.category_primary} onValueChange={set("category_primary")}>
-            <SelectTrigger id={`edit-category-${row.id}`} className="w-full">
-              <SelectValue placeholder="選擇分類" />
-            </SelectTrigger>
-            <SelectContent>
-              {categoryOptions.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={`edit-necessity-${row.id}`}>必要性</Label>
-          <Select value={draft.necessity} onValueChange={set("necessity")}>
-            <SelectTrigger id={`edit-necessity-${row.id}`} className="w-full">
-              <SelectValue placeholder="選擇必要性" />
-            </SelectTrigger>
-            <SelectContent>
-              {NECESSITY_OPTIONS.map((n) => (
-                <SelectItem key={n} value={n}>{n}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`edit-category-${row.id}`}>分類</Label>
+        <Select value={draft.category_primary} onValueChange={set("category_primary")}>
+          <SelectTrigger id={`edit-category-${row.id}`} className="w-full">
+            <SelectValue placeholder="選擇分類" />
+          </SelectTrigger>
+          <SelectContent>
+            {categoryOptions.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -346,7 +312,7 @@ const BATCH_FIELDS = EDITABLE_FIELDS.map((key) => ({ key, label: EDITABLE_LABELS
 
 function BatchBar({ selectedIds, categoryOptions, onDone, onClear }) {
   const batchMutate = useBatchCorrect()
-  const [field, setField] = useState("owner_primary")
+  const [field, setField] = useState("category_primary")
   const [value, setValue] = useState("")
 
   // 切換目標欄位時清空值，避免套用錯欄位的舊值
@@ -355,8 +321,6 @@ function BatchBar({ selectedIds, categoryOptions, onDone, onClear }) {
   }, [field])
 
   const valueOptions = useMemo(() => {
-    if (field === "owner_primary") return OWNER_OPTIONS
-    if (field === "necessity") return NECESSITY_OPTIONS
     if (field === "category_primary") return categoryOptions
     return []
   }, [field, categoryOptions])
@@ -681,9 +645,7 @@ export default function TransactionTable() {
                         <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
                           {Number(row.outflow) > 0 ? formatTWD(row.outflow) : "—"}
                         </TableCell>
-                        <TableCell><FieldBadge value={row.owner_primary} /></TableCell>
                         <TableCell><CategoryBadge row={row} /></TableCell>
-                        <TableCell><NecessityBadge value={row.necessity} /></TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             {row.ai_confidence != null && (
@@ -768,9 +730,7 @@ export default function TransactionTable() {
                         <SourceBadge row={row} />
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        <FieldBadge value={row.owner_primary} />
                         <CategoryBadge row={row} />
-                        <NecessityBadge value={row.necessity} />
                       </div>
                     </div>
                   </div>

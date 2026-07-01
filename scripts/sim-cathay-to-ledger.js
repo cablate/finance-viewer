@@ -25,24 +25,25 @@ function toNumber(v) {
   return Number.isFinite(p) ? p : null;
 }
 
-// 模擬 AI 第一環分類（關鍵字）。回傳 {owner, main, sub, necessity, reason, confidence} 或 null(pending)
+// 模擬 AI 第一環分類（關鍵字）。回傳 {main, sub, reason, confidence}。
 // main 對應 STANDARD_CATEGORIES（lib/constants.js）其一；sub 為自由文字子類別（可 null）。
+// MVP 只分 category（owner 事業/個人、necessity 該不該花 是下階段）。
 function classify(name) {
   const n = name.toUpperCase();
   if (/GOOGLE|OPENAI|ANTHROPIC|OSLINK|STEAM|CHATGPT|SUBSCR|MICROSOFT|GITHUB|JETBRAINS|APPLE|CANVA|NOTION/.test(n))
-    return { owner: '事業', main: '訂閱服務', sub: '軟體', necessity: '事業必要', reason: '國際軟體/訂閱', confidence: 0.92 };
+    return { main: '訂閱服務', sub: '軟體', reason: '國際軟體/訂閱', confidence: 0.92 };
   if (/統一超商|全聯|家樂福|超商|迷客夏|寶雅/.test(name))
-    return { owner: '個人', main: '飲食', sub: '便利商店', necessity: '可節省', reason: '便利商店/量販', confidence: 0.88 };
+    return { main: '飲食', sub: '便利商店', reason: '便利商店/量販', confidence: 0.88 };
   if (/麥當勞|漢堡|燒肉|餐|食|飲|咖啡|星巴克|茶|號|屋|廣場/.test(name))
-    return { owner: '個人', main: '飲食', sub: '餐飲', necessity: '可節省', reason: '餐飲', confidence: 0.7 };
+    return { main: '飲食', sub: '餐飲', reason: '餐飲', confidence: 0.7 };
   if (/加油站|中油|台塑/.test(name))
-    return { owner: '個人', main: '交通', sub: '油錢', necessity: '必要', reason: '加油', confidence: 0.85 };
+    return { main: '交通', sub: '油錢', reason: '加油', confidence: 0.85 };
   if (/保險/.test(name))
-    return { owner: '個人', main: '保險', sub: null, necessity: '必要', reason: '保險分期', confidence: 0.8 };
+    return { main: '保險', sub: null, reason: '保險分期', confidence: 0.8 };
   if (/手續費/.test(name))
-    return { owner: '事業', main: '金融手續與稅費', sub: '手續費', necessity: '事業必要', reason: '交易手續費', confidence: 0.9 };
+    return { main: '金融手續與稅費', sub: '手續費', reason: '交易手續費', confidence: 0.9 };
   // 未匹配關鍵字：AI 仍給最佳猜測 + 低信心（不填哨兵留空）。低信心會進待審讓人複核。
-  return { owner: '個人', main: '購物', sub: '其他', necessity: '可節省', reason: '未匹配關鍵字，AI 低信心猜測', confidence: 0.25 };
+  return { main: '購物', sub: '其他', reason: '未匹配關鍵字，AI 低信心猜測', confidence: 0.25 };
 }
 
 function main() {
@@ -88,18 +89,18 @@ function main() {
     if (amt < 0) {
       // 負數 = 繳款/退款（inflow），標移轉 → 不列入實際消費
       rows.push({ ...base, '金額': String(amt), '流入': String(-amt), '流出': '0',
-        '這筆是什麼': '信用卡繳款/移轉', '先放哪邊': '移轉不算', '分類': '', '子類別': '', '必要/可省': '不列入' });
+        '這筆是什麼': '信用卡繳款/移轉', '分類': '', '子類別': '' });
     } else {
       const c = classify(name);
       rows.push({ ...base, '金額': String(-amt), '流入': '0', '流出': String(amt),
         '這筆是什麼': '信用卡消費',
-        '先放哪邊': c?.owner ?? '待確認', '分類': c?.main ?? '待確認', '子類別': c?.sub ?? '',
-        '必要/可省': c?.necessity ?? '需確認', '判斷理由': c?.reason ?? '',
+        '分類': c?.main ?? '待確認', '子類別': c?.sub ?? '',
+        '判斷理由': c?.reason ?? '',
         '信心度': c?.confidence ?? '' });
     }
   }
 
-  const cols = ['來源類型','來源說明','日期','月份','名稱','金額','流入','流出','帳戶餘額','帳戶原始排序','原始交易資訊','這筆是什麼','先放哪邊','分類','子類別','必要/可省','信心度','判斷理由','備註'];
+  const cols = ['來源類型','來源說明','日期','月份','名稱','金額','流入','流出','帳戶餘額','帳戶原始排序','原始交易資訊','這筆是什麼','分類','子類別','信心度','判斷理由','備註'];
   const esc = (v) => { const s = String(v ?? ''); return /[",]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const csv = [cols.join(','), ...rows.map((r) => cols.map((c) => esc(r[c])).join(','))].join('\n');
   fs.writeFileSync(outPath, csv);

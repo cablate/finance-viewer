@@ -226,20 +226,6 @@ export default function Overview() {
           onClick={() => drill()}
         />
         <MetricCard
-          label="個人支出"
-          value={formatTWD(summary?.personalSpend)}
-          icon={<Users className="h-4 w-4" />}
-          loading={summaryLoading}
-          onClick={() => drill({ scope: "personal" })}
-        />
-        <MetricCard
-          label="事業支出"
-          value={formatTWD(summary?.businessSpend)}
-          icon={<Briefcase className="h-4 w-4" />}
-          loading={summaryLoading}
-          onClick={() => drill({ scope: "business" })}
-        />
-        <MetricCard
           label="支出後結餘"
           value={formatTWD(summary?.moneyLeftAfterSpend)}
           icon={<PiggyBank className="h-4 w-4" />}

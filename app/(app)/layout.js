@@ -9,7 +9,6 @@ import { Suspense, useEffect } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import AppSidebar from "@/components/AppSidebar"
-import ScopeBar from "@/components/ScopeBar"
 import SearchInput from "@/components/SearchInput"
 import AIBanner from "@/components/AIBanner"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -53,7 +52,6 @@ function ShellContent({ children }) {
   return (
     <AppSidebar>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-        <ScopeBar />
         <SearchInput />
       </header>
       <AIBanner />

@@ -73,7 +73,7 @@ function Accuracy({ rule, className }) {
 }
 
 function ResultBadges({ rule }) {
-  const vals = [rule.owner_value, rule.category_value, rule.necessity_value].filter(Boolean)
+  const vals = [rule.category_value].filter(Boolean)
   if (vals.length === 0) return <span className="text-xs text-muted-foreground">（無結果）</span>
   return (
     <div className="flex flex-wrap gap-1">
@@ -99,7 +99,7 @@ function ConditionText({ rule }) {
 
 const EMPTY_FORM = {
   match_key: "", source_type: "", direction: "none",
-  owner_value: "", category_value: "", necessity_value: "",
+  category_value: "",
   confidence: "0.5", note: "", enabled: true,
 }
 
@@ -109,9 +109,7 @@ function toForm(rule) {
     match_key: rule.match_key || "",
     source_type: rule.source_type || "",
     direction: rule.direction || "none",
-    owner_value: rule.owner_value || "",
     category_value: rule.category_value || "",
-    necessity_value: rule.necessity_value || "",
     confidence: rule.confidence != null ? String(rule.confidence) : "0.5",
     note: rule.note || "",
     enabled: rule.enabled !== 0,
@@ -136,9 +134,7 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
         match_key: form.match_key.trim() || null,
         source_type: form.source_type.trim() || null,
         direction: form.direction === "none" ? null : form.direction,
-        owner_value: form.owner_value.trim() || null,
         category_value: form.category_value.trim() || null,
-        necessity_value: form.necessity_value.trim() || null,
         confidence: Number(form.confidence) || 0,
         note: form.note.trim() || null,
         enabled: form.enabled,
@@ -189,19 +185,9 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
 
           <div className="space-y-3">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">分類結果（套用值）</Label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div>
-                <Label htmlFor="f-owner" className="text-xs">歸屬</Label>
-                <Input id="f-owner" value={form.owner_value} onChange={(e) => set("owner_value", e.target.value)} placeholder="例：事業" />
-              </div>
-              <div>
-                <Label htmlFor="f-cat" className="text-xs">分類</Label>
-                <Input id="f-cat" value={form.category_value} onChange={(e) => set("category_value", e.target.value)} placeholder="例：雲端工具" />
-              </div>
-              <div>
-                <Label htmlFor="f-nec" className="text-xs">必要性</Label>
-                <Input id="f-nec" value={form.necessity_value} onChange={(e) => set("necessity_value", e.target.value)} placeholder="例：事業必要" />
-              </div>
+            <div>
+              <Label htmlFor="f-cat" className="text-xs">分類</Label>
+              <Input id="f-cat" value={form.category_value} onChange={(e) => set("category_value", e.target.value)} placeholder="例：雲端工具" />
             </div>
           </div>
 
