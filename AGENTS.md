@@ -105,6 +105,7 @@ POST /api/transactions/batch {corrections: [...]}
 
 **兩環**：
 - **第一環（即時，每月匯入）**：你把帳單轉成 schema → 既有規則覆蓋的，工具匯入時自動套用 → **未覆蓋的你分析分類（給信心度）→ 把有把握的每個 distinct 商家各建一條規則**（`POST /api/rules`，帶 `confidence`、`origin=ai_analysis`）。這些規則給未來月份用，每月越疊越多 → 你越閒。
+- ⚠ **泛名／銀行操作不建規則**：「電子轉出」「轉帳」「繳費」「利息」「手續費」等**非商家描述**（match_key 無區別力，建規則會誤套到所有同名交易）。這類用 `flow_type`（移轉／繳款／非消費）區分，不靠商家規則；匯入時就標對 flow_type 排除出消費統計。
 - **第二環（回饋）**：人類在 UI 改錯 → 寫進 `correction_log`（自帶 `match_key`/`source_type`/`direction`/`rule_id` 脈絡）→ 你讀 `GET /api/corrections`（`summary` 已以 `match_key` 聚合，**免 join**）→ 據重複的 (field, old→new) 模式修訂既有規則或新增。`correction_log.rule_id` 非 NULL =「該規則套用被人類覆寫」→ `PATCH` 降該規則 `confidence` 或拆規則。
 
 **信心度**：你對每筆分類都給 0~1；工具會把**低信心**排前面，讓人類優先審你沒把握的（規則的 `confidence` + 工具維護的 `applied_count`/`overridden_count` 一起決定排序與準確率）。

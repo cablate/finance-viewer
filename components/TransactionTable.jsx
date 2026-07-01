@@ -30,7 +30,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { formatTWD, formatDate } from "@/lib/format"
-import { OWNER_OPTIONS, NECESSITY_OPTIONS, EDITABLE_FIELDS, EDITABLE_LABELS } from "@/lib/constants"
+import { OWNER_OPTIONS, NECESSITY_OPTIONS, EDITABLE_FIELDS, EDITABLE_LABELS, STANDARD_CATEGORIES } from "@/lib/constants"
 import { useMeta, useTransactions, usePatchTxn, useBatchCorrect, useReviewTxns } from "@/lib/hooks"
 
 import { Button } from "@/components/ui/button"
@@ -487,19 +487,9 @@ export default function TransactionTable() {
   const [selectedTxnId, setSelectedTxnId] = useState(null)
   const [batchIds, setBatchIds] = useState([])
 
-  // categories 選項（含現有值確保可選），失敗時 fallback 空陣列不擋編輯
-  const categoryOptions = useMemo(() => {
-    const list = meta?.filters?.categories?.map((c) => c.value) ?? []
-    const seen = new Set(list)
-    // 補上目前頁面出現但 meta 沒列出的值（例如剛被改過）
-    for (const r of data?.rows ?? []) {
-      if (r.category_primary && !seen.has(r.category_primary)) {
-        list.push(r.category_primary)
-        seen.add(r.category_primary)
-      }
-    }
-    return list
-  }, [meta, data])
+  // 分類只能選標準 13 類（STANDARD_CATEGORIES），避免自由文字（如「餐飲」）進 correction_log / 規則。
+  // 現有非標準值不在選項內——表格 CategoryBadge 仍顯示原值，但編輯時須改選標準覆蓋。
+  const categoryOptions = STANDARD_CATEGORIES
 
   const rows = data?.rows ?? []
   const total = data?.total ?? 0
