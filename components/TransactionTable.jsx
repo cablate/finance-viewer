@@ -676,6 +676,13 @@ export default function TransactionTable() {
                         <TableCell><NecessityBadge value={row.necessity} /></TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {row.ai_confidence != null && (
+                              <span
+                                className={cn("size-2 rounded-full", row.ai_confidence >= 0.8 ? "bg-success" : row.ai_confidence >= 0.5 ? "bg-warning" : "bg-danger")}
+                                title={`AI 信心度 ${Math.round(row.ai_confidence * 100)}%`}
+                                aria-label={`AI 信心度 ${Math.round(row.ai_confidence * 100)}%`}
+                              />
+                            )}
                             <SourceBadge row={row} />
                             {!row.reviewed ? (
                               <Button
@@ -742,6 +749,12 @@ export default function TransactionTable() {
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                         <span className="whitespace-nowrap">{formatDate(row.transaction_date)}</span>
+                        {row.ai_confidence != null && (
+                          <span
+                            className={cn("size-2 rounded-full", row.ai_confidence >= 0.8 ? "bg-success" : row.ai_confidence >= 0.5 ? "bg-warning" : "bg-danger")}
+                            title={`AI 信心度 ${Math.round(row.ai_confidence * 100)}%`}
+                          />
+                        )}
                         <SourceBadge row={row} />
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
