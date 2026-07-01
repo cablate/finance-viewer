@@ -33,7 +33,7 @@ import {
 
 // 把 URL search params 組成查詢字串供 useTrend。
 // trend 端已排除 month（跨月聚合），這裡同步剔除 month 避免帶無意義的篩選。
-// 其餘維度（scope / category / search / view ...）沿用主狀態，讓圖表與其他檢視一致。
+// 其餘維度（category / search / view ...）沿用主狀態，讓圖表與其他檢視一致。
 function buildTrendParams(searchParams) {
   const p = new URLSearchParams()
   for (const [key, value] of searchParams.entries()) {
@@ -53,8 +53,6 @@ function TrendTable({ data }) {
         <TableRow>
           <TableHead>月份</TableHead>
           <TableHead className="text-right">總支出</TableHead>
-          <TableHead className="text-right">個人</TableHead>
-          <TableHead className="text-right">事業</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -65,12 +63,6 @@ function TrendTable({ data }) {
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatTWD(row.spend)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums text-muted-foreground">
-              {formatTWD(row.personalSpend)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums text-muted-foreground">
-              {formatTWD(row.businessSpend)}
             </TableCell>
           </TableRow>
         ))}
@@ -112,7 +104,7 @@ export default function TrendView() {
           每月支出走勢
         </CardTitle>
         <CardDescription>
-          各月總支出及個人／事業拆分，圖表附無障礙資料表。
+          各月總支出，圖表附無障礙資料表。
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
