@@ -471,6 +471,7 @@ export default function TransactionTable() {
   const sort = sp.get("sort") || "date"
   const direction = sp.get("direction") === "asc" ? "asc" : "desc"
   const page = Math.max(1, Number(sp.get("page")) || 1)
+  const view = sp.get("view") || ""
   const offset = (page - 1) * PAGE_SIZE
 
   // 組裝給 useTransactions 的查詢字串（帶入所有 URL params + limit/offset）
@@ -573,11 +574,37 @@ export default function TransactionTable() {
     [push, totalPages],
   )
 
+  // 「只看待審」：view=needs-review + 低信心升序（與 AIBanner「前往審查」同一去處）。
+  const toggleNeedsReview = useCallback(() => {
+    if (view === "needs-review") {
+      push({ view: null, sort: null, direction: null, page: null })
+    } else {
+      push({ view: "needs-review", sort: "confidence", direction: "asc", page: null })
+    }
+  }, [view, push])
+
   const rangeStart = total === 0 ? 0 : offset + 1
   const rangeEnd = Math.min(offset + rows.length, total)
 
   return (
     <section aria-label="交易列表" className="flex flex-col gap-3">
+      {/* 篩選列 */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant={view === "needs-review" ? "default" : "outline"}
+          size="sm"
+          aria-pressed={view === "needs-review"}
+          onClick={toggleNeedsReview}
+        >
+          只看待審（AI 沒把握）
+        </Button>
+        {view === "needs-review" && (
+          <span className="text-xs text-muted-foreground">
+            未審 + AI 較沒把握的（低信心／待確認／未分析），依信心度升序
+          </span>
+        )}
+      </div>
       {/* 載入：Skeleton 行 */}
       {loading ? (
         <ScrollArea className="rounded-md border">

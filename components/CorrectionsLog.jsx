@@ -1,17 +1,17 @@
 "use client"
 
-// CorrectionsLog — 修正累積（學習資產）
+// CorrectionsLog — 修正紀錄（被動 log，AI 進化規則的原料）。
 // 對應 endpoint GET /api/corrections，回傳 { rows, summary, total }。
-// audit 修正點：過去前端只在 transaction row 顯示 correction_count 數字，
-// 這個元件把 endpoint 已提供的 summary（欄位×舊值×新值×次數）與完整明細 rows 補上，
-// 讓累積修正從「一個數字」升級成可檢視的學習資產。
+// 顯示以「交易」為主體：同一筆交易可能被改多個欄位（多筆 correction），分組成一张卡片，
+// 顯示商家／日期／金額 + 該筆所有變更（欄位 舊→新）。
+// 左側 Summary 是以 match_key 聚合的「規則候選」（AI 第二環原料），點擊下鑽該比對鍵明細。
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { History, AlertTriangle, RefreshCw, X } from "lucide-react"
 import { useCorrections } from "@/lib/hooks"
 import { EDITABLE_LABELS as FIELD_LABEL } from "@/lib/constants"
-import { formatDate } from "@/lib/format"
+import { formatDate, formatTWD } from "@/lib/format"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -127,119 +127,46 @@ function SummaryTable({ rows, activeKey, onPick }) {
   )
 }
 
-function RowsTable({ rows, page, totalPages, onPageChange }) {
+// 交易為主體的明細：每張卡 = 一筆被修正過的交易，列出它所有的欄位變更。
+function TransactionGroup({ group }) {
   return (
-    <div className="space-y-3">
-      {/* 桌面表格（md 以上） */}
-      <div className="hidden md:block">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>欄位</TableHead>
-            <TableHead>舊值</TableHead>
-            <TableHead>新值</TableHead>
-            <TableHead>時間</TableHead>
-            <TableHead>交易</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow key={row.id}>
-              <TableCell className="font-medium">{fieldLabel(row.field_name)}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {displayValue(row.old_value)}
-              </TableCell>
-              <TableCell className="font-medium">{displayValue(row.new_value)}</TableCell>
-              <TableCell className="text-muted-foreground whitespace-nowrap">
-                {formatDate(row.corrected_at)}
-              </TableCell>
-              <TableCell
-                className="max-w-[16rem] truncate text-muted-foreground"
-                title={row.transaction_name || `#${row.transaction_id}`}
-              >
-                {row.transaction_name || `#${row.transaction_id}`}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <li className="rounded-md border p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="min-w-0 truncate font-medium" title={group.name}>
+          {group.name}
+        </span>
+        <span className="tabular-nums text-sm text-muted-foreground">
+          {Number(group.outflow) > 0
+            ? `-${formatTWD(group.outflow)}`
+            : Number(group.amount) !== 0
+              ? formatTWD(group.amount)
+              : ""}
+        </span>
       </div>
-
-      {/* 手機卡片（md 以下） */}
-      <div className="space-y-2 md:hidden">
-        {rows.map((row) => (
-          <div key={row.id} className="rounded-md border p-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="font-medium">{fieldLabel(row.field_name)}</span>
-              <Badge variant="secondary" className="font-normal">{displayValue(row.new_value)}</Badge>
-            </div>
-            <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-              <div>舊值：{displayValue(row.old_value)}</div>
-              <div className="whitespace-nowrap">{formatDate(row.corrected_at)}</div>
-              <div className="truncate" title={row.transaction_name || `#${row.transaction_id}`}>
-                {row.transaction_name || `#${row.transaction_id}`}
-              </div>
-            </div>
-          </div>
+      <div className="mt-0.5 text-xs text-muted-foreground">
+        {formatDate(group.date)}
+      </div>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {group.corrections.map((c) => (
+          <li
+            key={c.id}
+            className="flex flex-wrap items-center gap-1.5 text-sm"
+          >
+            <span className="text-muted-foreground">{fieldLabel(c.field_name)}</span>
+            <span className="text-muted-foreground/70 line-through">
+              {displayValue(c.old_value)}
+            </span>
+            <span className="text-muted-foreground/60">→</span>
+            <Badge variant="secondary" className="font-normal">
+              {displayValue(c.new_value)}
+            </Badge>
+            <span className="ml-auto text-xs text-muted-foreground/70">
+              {formatDate(c.corrected_at)}
+            </span>
+          </li>
         ))}
-      </div>
-      {totalPages > 1 && (
-        <Pagination className="mx-0 justify-end">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                text="上一頁"
-                aria-disabled={page === 1}
-                className={
-                  page === 1
-                    ? "pointer-events-none opacity-50"
-                    : "cursor-pointer"
-                }
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (page > 1) onPageChange(page - 1)
-                }}
-              />
-            </PaginationItem>
-            {pageRange(page, totalPages).map((p, i) =>
-              p === null ? (
-                <PaginationItem key={`ellipsis-${i}`}>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              ) : (
-                <PaginationItem key={p}>
-                  <PaginationLink
-                    isActive={p === page}
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      onPageChange(p)
-                    }}
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              ),
-            )}
-            <PaginationItem>
-              <PaginationNext
-                text="下一頁"
-                aria-disabled={page === totalPages}
-                className={
-                  page === totalPages
-                    ? "pointer-events-none opacity-50"
-                    : "cursor-pointer"
-                }
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (page < totalPages) onPageChange(page + 1)
-                }}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
-    </div>
+      </ul>
+    </li>
   )
 }
 
@@ -265,7 +192,7 @@ function TableSkeleton({ rows = 5 }) {
   return (
     <div className="space-y-2">
       {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} className="h-9 w-full" />
+        <Skeleton key={i} className="h-16 w-full" />
       ))}
     </div>
   )
@@ -275,7 +202,7 @@ export default function CorrectionsLog() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // corrections 是跨月累積的學習資產，不依月份/scope 過濾。
+  // corrections 是跨月累積的 log，不依月份/scope 過濾。
   // 支援 ?key= 下鑽：summary 點擊某比對鍵 → 明細過濾到該鍵（規則候選 → 原始校正明細）。
   const matchKey = searchParams.get("key") || ""
   const paramParts = []
@@ -290,10 +217,33 @@ export default function CorrectionsLog() {
   const rows = data?.rows || []
   const summary = data?.summary || []
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  // 以交易分組：一筆交易可能被改多個欄位（多筆 correction）→ 聚合成一張卡。
+  const groups = useMemo(() => {
+    const map = new Map()
+    for (const r of rows) {
+      if (!map.has(r.transaction_id)) {
+        map.set(r.transaction_id, {
+          id: r.transaction_id,
+          name: r.transaction_name || `#${r.transaction_id}`,
+          date: r.transaction_date,
+          outflow: r.transaction_outflow,
+          amount: r.transaction_amount,
+          corrections: [],
+          lastAt: r.corrected_at,
+        })
+      }
+      const g = map.get(r.transaction_id)
+      g.corrections.push(r)
+      if (r.corrected_at > g.lastAt) g.lastAt = r.corrected_at
+    }
+    // 依最近修正時間降序（最近改的在前）
+    return [...map.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1))
+  }, [rows])
+
+  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const start = (safePage - 1) * PAGE_SIZE
-  const pageRows = rows.slice(start, start + PAGE_SIZE)
+  const pageGroups = groups.slice(start, start + PAGE_SIZE)
 
   function handlePick(nextKey) {
     const sp = new URLSearchParams(searchParams)
@@ -302,7 +252,6 @@ export default function CorrectionsLog() {
     } else {
       sp.set("key", nextKey)
     }
-    sp.set("mode", "corrections")
     setPage(1)
     router.push(`?${sp.toString()}`, { scroll: false })
   }
@@ -310,12 +259,11 @@ export default function CorrectionsLog() {
   function clearKey() {
     const sp = new URLSearchParams(searchParams)
     sp.delete("key")
-    sp.set("mode", "corrections")
     setPage(1)
     router.push(`?${sp.toString()}`, { scroll: false })
   }
 
-  const isEmpty = !loading && !error && rows.length === 0
+  const isEmpty = !loading && !error && groups.length === 0
 
   return (
     <ErrorBoundary>
@@ -323,13 +271,11 @@ export default function CorrectionsLog() {
         <header className="space-y-1">
           <div className="flex items-center gap-2">
             <History className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold tracking-tight">
-              修正累積（學習資產）
-            </h2>
+            <h2 className="text-lg font-semibold tracking-tight">修正紀錄</h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            所有人工修正的歷史。左側是變更的累積摘要，右側是逐筆明細。
-            這些紀錄會逐月累積，成為日後判斷同類交易的依據。
+            所有在交易明細做過的修正，逐筆自動記錄。左側是「規則候選」聚合（給 AI 進化規則用），
+            右側列出你改過的每一筆交易。
           </p>
         </header>
 
@@ -337,33 +283,24 @@ export default function CorrectionsLog() {
           <ErrorState message={error?.message} onRetry={refetch} />
         ) : (
           <>
-            {/* Summary：補「前端只取 count」的落差 — 把欄位×舊值×新值×次數完整呈現 */}
+            {/* Summary：以 match_key 聚合的規則候選（AI 第二環原料） */}
             <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">變更摘要</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">
+                規則候選（比對鍵 × 校正為）
+              </h3>
               {loading ? (
                 <TableSkeleton rows={4} />
               ) : summary.length === 0 ? (
                 <p className="text-sm text-muted-foreground">尚無累積資料。</p>
               ) : (
                 <div className="rounded-md border">
-                  <SummaryTable
-                    rows={summary}
-                    activeKey={matchKey}
-                    onPick={handlePick}
-                  />
+                  <SummaryTable rows={summary} activeKey={matchKey} onPick={handlePick} />
                 </div>
               )}
               {matchKey && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>
-                    已套用篩選：比對鍵 = {matchKey}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 px-2 text-xs"
-                    onClick={clearKey}
-                  >
+                  <span>已套用篩選：比對鍵 = {matchKey}</span>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={clearKey}>
                     <X className="mr-1 h-3 w-3" />
                     清除
                   </Button>
@@ -371,19 +308,18 @@ export default function CorrectionsLog() {
               )}
             </div>
 
-            {/* Detail rows */}
+            {/* 明細：以交易為主體 */}
             <div className="space-y-2">
               <div className="flex items-baseline justify-between">
-                <h3 className="text-sm font-medium text-muted-foreground">修正明細</h3>
-                {!loading && rows.length > 0 && (
+                <h3 className="text-sm font-medium text-muted-foreground">修正過的交易</h3>
+                {!loading && groups.length > 0 && (
                   <span className="text-xs text-muted-foreground">
-                    共 {data?.total ?? rows.length} 筆
-                    {data && data.total > rows.length ? `（僅顯示最近 ${rows.length} 筆）` : ""}
+                    共 {groups.length} 筆交易
                   </span>
                 )}
               </div>
               {loading ? (
-                <TableSkeleton rows={6} />
+                <TableSkeleton rows={5} />
               ) : isEmpty ? (
                 <Empty>
                   <EmptyHeader>
@@ -392,20 +328,66 @@ export default function CorrectionsLog() {
                     </EmptyMedia>
                     <EmptyTitle>尚無修正紀錄</EmptyTitle>
                     <EmptyDescription>
-                      當你開始調整交易的分類、歸屬或必要性，這裡會逐筆累積每一次變更，
-                      成為後續判斷同類交易的學習資產。
+                      當你在交易明細調整分類、歸屬或必要性，這裡會逐筆累積每一次變更。
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               ) : (
-                <div className="rounded-md border">
-                  <RowsTable
-                    rows={pageRows}
-                    page={safePage}
-                    totalPages={totalPages}
-                    onPageChange={setPage}
-                  />
-                </div>
+                <>
+                  <ul className="space-y-2">
+                    {pageGroups.map((g) => (
+                      <TransactionGroup key={g.id} group={g} />
+                    ))}
+                  </ul>
+                  {totalPages > 1 && (
+                    <Pagination className="mx-0 justify-end">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            text="上一頁"
+                            aria-disabled={safePage === 1}
+                            className={safePage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (safePage > 1) setPage(safePage - 1)
+                            }}
+                          />
+                        </PaginationItem>
+                        {pageRange(safePage, totalPages).map((p, i) =>
+                          p === null ? (
+                            <PaginationItem key={`ellipsis-${i}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          ) : (
+                            <PaginationItem key={p}>
+                              <PaginationLink
+                                isActive={p === safePage}
+                                className="cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  setPage(p)
+                                }}
+                              >
+                                {p}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ),
+                        )}
+                        <PaginationItem>
+                          <PaginationNext
+                            text="下一頁"
+                            aria-disabled={safePage === totalPages}
+                            className={safePage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (safePage < totalPages) setPage(safePage + 1)
+                            }}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               )}
             </div>
           </>

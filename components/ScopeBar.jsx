@@ -4,7 +4,7 @@
 // 單選、自帶 aria-pressed（取代未安裝的 ToggleGroup，仍達 a11y 語意）。
 // 切 scope 更新 URL search params；scope=all 時清除參數（預設值不寫入 URL）。
 
-import { useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 const SCOPES = [
@@ -17,13 +17,15 @@ export default function ScopeBar() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const current = searchParams.get("scope") || "all"
+  const pathname = usePathname()
 
   function setScope(value) {
     const params = new URLSearchParams(searchParams.toString())
     if (value === "all") params.delete("scope")
     else params.set("scope", value)
     const qs = params.toString()
-    router.push(qs ? `/?${qs}` : "/")
+    // 維持當前 route，只更新 query（scope 跨頁共享）。
+    router.push(qs ? `?${qs}` : pathname)
   }
 
   return (

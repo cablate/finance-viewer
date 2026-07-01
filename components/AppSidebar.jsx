@@ -1,20 +1,13 @@
 "use client"
 
 // AppSidebar：整體側欄 layout shell。
-// 內含 SidebarProvider + Sidebar（導覽 menu + 分類 footer），並包住主內容（children）。
-// menu items 切 mode；active 依 URL mode。
-// SidebarFooter 用 useBreakdown(dimension=category) 顯示分類，點擊帶 category 切到 transactions。
-// 行動：shadcn <Sidebar> 在 isMobile 時自動以 <Sheet> 呈現（含 SheetTitle "Sidebar"），
-//   並於主內容頂部放 <SidebarTrigger>（漢堡鈕）開啟側欄，天然解 mobile 關不掉 bug。
-//
-// 整合者用法：
-//   <AppSidebar>
-//     <ScopeBar />
-//     {mode === 'overview' && <Overview />}
-//     ...
-//   </AppSidebar>
+// 多 route 架構：導覽項是獨立 route（/, /transactions, /trend, /corrections, /rules），
+// 用 <Link> + asChild；active 依 usePathname。跨 route 保留 month/scope query（其他 view 專屬 param 不帶）。
+// SidebarFooter 用 useBreakdown(dimension=category) 顯示分類，點擊帶 category 到 /transactions。
+// 行動：shadcn <Sidebar> 在 isMobile 時自動以 <Sheet> 呈現（含 SheetTitle），並於主內容頂部放 <SidebarTrigger>。
 
-import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { usePathname, useSearchParams } from "next/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -33,7 +26,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useBreakdown } from "@/lib/hooks"
 import { formatTWD } from "@/lib/format"
 import {
-  ClipboardCheck,
   History,
   LayoutDashboard,
   ListChecks,
@@ -43,31 +35,31 @@ import {
 } from "lucide-react"
 
 const NAV = [
-  { mode: "overview", label: "Overview", icon: LayoutDashboard },
-  { mode: "transactions", label: "交易明細", icon: ReceiptText },
-  { mode: "trend", label: "走勢", icon: TrendingUp },
-  { mode: "review", label: "審查佇列", icon: ClipboardCheck },
-  { mode: "corrections", label: "修正紀錄", icon: History },
-  { mode: "rules", label: "分類規則", icon: ListChecks },
+  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/transactions", label: "交易明細", icon: ReceiptText },
+  { href: "/trend", label: "走勢", icon: TrendingUp },
+  { href: "/corrections", label: "修正紀錄", icon: History },
+  { href: "/rules", label: "分類規則", icon: ListChecks },
 ]
 
 export default function AppSidebar({ children }) {
-  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
-  const currentMode = searchParams.get("mode") || "overview"
   const month = searchParams.get("month") || ""
   const scope = searchParams.get("scope") || "all"
   const activeCategory = searchParams.get("category") || ""
 
-  // 以當前 searchParams 為基底，套用更新後 push；value 為空/特定清除值時移除該鍵。
-  function pushParams(updates) {
-    const params = new URLSearchParams(searchParams.toString())
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value === null || value === "") params.delete(key)
-      else params.set(key, value)
-    })
-    const qs = params.toString()
-    router.push(qs ? `/?${qs}` : "/")
+  // 跨 route 保留 month / scope（皆具跨頁意義）；其他 view 專屬 param 不帶，避免跨頁污染。
+  function withScope(href, extra = {}) {
+    const p = new URLSearchParams()
+    if (month) p.set("month", month)
+    if (scope && scope !== "all") p.set("scope", scope)
+    for (const [k, v] of Object.entries(extra)) {
+      if (v == null || v === "") p.delete(k)
+      else p.set(k, v)
+    }
+    const qs = p.toString()
+    return qs ? `${href}?${qs}` : href
   }
 
   // footer 分類列表：保留 month / scope 篩選，dimension=category。
@@ -90,21 +82,19 @@ export default function AppSidebar({ children }) {
           <SidebarGroup>
             <SidebarGroupLabel>導覽</SidebarGroupLabel>
             <SidebarMenu>
-              {NAV.map(({ mode, label, icon: Icon }) => (
-                <SidebarMenuItem key={mode}>
-                  <SidebarMenuButton
-                    isActive={currentMode === mode}
-                    tooltip={label}
-                    onClick={() =>
-                      // 切 mode 時清除 category，避免跨模式殘留篩選。
-                      pushParams({ mode, category: "" })
-                    }
-                  >
-                    <Icon aria-hidden="true" />
-                    <span>{label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {NAV.map(({ href, label, icon: Icon }) => {
+                const active = href === "/" ? pathname === "/" : pathname === href
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={label}>
+                      <Link href={withScope(href)}>
+                        <Icon aria-hidden="true" />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
@@ -123,18 +113,17 @@ export default function AppSidebar({ children }) {
                 categories.map((c) => (
                   <SidebarMenuItem key={c.label}>
                     <SidebarMenuButton
+                      asChild
                       isActive={activeCategory === c.label}
                       tooltip={c.label}
                       className="cursor-pointer"
-                      onClick={() =>
-                        // 下鑽：帶 category 切到 transactions。
-                        pushParams({ mode: "transactions", category: c.label })
-                      }
                     >
-                      <span className="truncate">{c.label}</span>
-                      <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                        {formatTWD(c.spend)}
-                      </span>
+                      <Link href={withScope("/transactions", { category: c.label })}>
+                        <span className="truncate">{c.label}</span>
+                        <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                          {formatTWD(c.spend)}
+                        </span>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))

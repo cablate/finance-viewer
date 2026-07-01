@@ -5,12 +5,13 @@
 // 清空時清除 search（回到原 mode）。修正 audit 指出「前端無搜尋 input」的缺口。
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
 export default function SearchInput() {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const [value, setValue] = useState(searchParams.get("search") || "")
 
@@ -27,10 +28,15 @@ export default function SearchInput() {
       if (v) params.set("search", v)
       else params.delete("search")
       const qs = params.toString()
-      router.replace(qs ? `/?${qs}` : "/", { scroll: false })
+      // 非交易頁輸入搜尋 → 帶到 /transactions 顯示結果；交易頁原地更新；清空則留在當前頁。
+      if (v && pathname !== "/transactions") {
+        router.replace(`/transactions?${qs}`, { scroll: false })
+      } else {
+        router.replace(qs ? `?${qs}` : pathname, { scroll: false })
+      }
     }, 300)
     return () => clearTimeout(handle)
-  }, [value, searchParams, router])
+  }, [value, searchParams, router, pathname])
 
   return (
     <div className="relative w-full max-w-xs">

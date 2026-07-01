@@ -106,22 +106,24 @@ export default function Overview() {
     loading: txLoading,
   } = useTransactions(txParams)
 
-  // 下鑽：以目前 query 為基底，套用 overrides 後切換 mode。保留 month/scope 等篩選。
+  // 下鑽到 /transactions：以目前 query 為基底，套用 overrides 後導向 transactions route。
+  // 保留 month/scope 等篩選；mode 在 route 架構下不存在（過濾掉避免髒 param）。
   const drill = useCallback(
     (overrides = {}) => {
       const sp = new URLSearchParams(searchParams.toString())
       for (const [k, v] of Object.entries(overrides)) {
+        if (k === "mode") continue
         if (v === null || v === undefined || v === "") sp.delete(k)
         else sp.set(k, v)
       }
-      if (!sp.get("mode")) sp.set("mode", "transactions")
-      router.push(`?${sp.toString()}`)
+      sp.delete("mode")
+      router.push(`/transactions?${sp.toString()}`)
     },
     [router, searchParams],
   )
 
   const drillCategory = useCallback(
-    (label) => drill({ mode: "transactions", category: label, search: "" }),
+    (label) => drill({ category: label, search: "" }),
     [drill],
   )
 
@@ -221,28 +223,28 @@ export default function Overview() {
           value={formatTWD(summary?.actualSpend)}
           icon={<Receipt className="h-4 w-4" />}
           loading={summaryLoading}
-          onClick={() => drill({ mode: "transactions" })}
+          onClick={() => drill()}
         />
         <MetricCard
           label="個人支出"
           value={formatTWD(summary?.personalSpend)}
           icon={<Users className="h-4 w-4" />}
           loading={summaryLoading}
-          onClick={() => drill({ mode: "transactions", scope: "personal" })}
+          onClick={() => drill({ scope: "personal" })}
         />
         <MetricCard
           label="事業支出"
           value={formatTWD(summary?.businessSpend)}
           icon={<Briefcase className="h-4 w-4" />}
           loading={summaryLoading}
-          onClick={() => drill({ mode: "transactions", scope: "business" })}
+          onClick={() => drill({ scope: "business" })}
         />
         <MetricCard
           label="支出後結餘"
           value={formatTWD(summary?.moneyLeftAfterSpend)}
           icon={<PiggyBank className="h-4 w-4" />}
           loading={summaryLoading}
-          onClick={() => drill({ mode: "transactions" })}
+          onClick={() => drill()}
         />
         <MetricCard
           label="最新帳戶餘額"
@@ -258,7 +260,7 @@ export default function Overview() {
           }
           icon={<Landmark className="h-4 w-4" />}
           loading={summaryLoading}
-          onClick={() => drill({ mode: "transactions", view: "bank" })}
+          onClick={() => drill({ view: "bank" })}
         />
       </div>
 
@@ -375,7 +377,7 @@ export default function Overview() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => drill({ mode: "transactions" })}
+                onClick={() => drill()}
               >
                 查看全部
                 <ArrowRight />
@@ -413,7 +415,6 @@ export default function Overview() {
                         type="button"
                         onClick={() =>
                           drill({
-                            mode: "transactions",
                             category: "",
                             search: row.name,
                           })

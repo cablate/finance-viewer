@@ -86,10 +86,13 @@ function ResultBadges({ rule }) {
 
 function ConditionText({ rule }) {
   const parts = []
-  if (rule.match_key) parts.push(rule.match_key)
+  // 顯示代表交易名（原始，可能截斷——國泰帳單原始資料就這樣）為主；技術 match_key 收到 tooltip。
+  const nameToShow = rule.sample_name || rule.match_key
+  if (nameToShow) parts.push(nameToShow)
   if (rule.source_type) parts.push(rule.source_type)
   if (rule.direction) parts.push(DIRECTION_LABEL[rule.direction])
-  return <span className={parts.length ? "" : "text-xs text-muted-foreground"}>
+  const showKeyTip = rule.match_key && rule.match_key !== nameToShow
+  return <span className={parts.length ? "" : "text-xs text-muted-foreground"} title={showKeyTip ? `比對鍵：${rule.match_key}` : undefined}>
     {parts.length ? parts.join(" · ") : "（無條件）"}
   </span>
 }
