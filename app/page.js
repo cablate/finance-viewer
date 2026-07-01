@@ -18,6 +18,7 @@ import ReviewQueue from "@/components/ReviewQueue"
 import CorrectionsLog from "@/components/CorrectionsLog"
 import RulesManager from "@/components/RulesManager"
 import SearchInput from "@/components/SearchInput"
+import AIBanner from "@/components/AIBanner"
 import { useMeta } from "@/lib/hooks"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -90,6 +91,7 @@ function PageContent() {
         <ScopeBar />
         <SearchInput />
       </header>
+      <AIBanner />
       <main className="p-4">
         {!isReady ? (
           <div className="space-y-3">
