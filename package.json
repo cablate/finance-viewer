@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3127",
     "lint": "next lint",
+    "test": "node --test",
     "seed": "node scripts/seed-from-ledger.js",
     "seed:reset": "node scripts/seed-from-ledger.js --reset",
     "seed:demo": "node scripts/seed-demo.js",
