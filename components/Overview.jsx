@@ -147,6 +147,15 @@ export default function Overview() {
   const automationPercent = Math.round(
     (Number(classification.automationRate ?? 0) || 0) * 100,
   )
+  const reviewedPercent = Math.round(
+    (Number(classification.reviewedRate ?? 0) || 0) * 100,
+  )
+  const highConfidencePercent = Math.round(
+    (Number(classification.highConfidenceRate ?? 0) || 0) * 100,
+  )
+  const lowConfidencePercent = Math.round(
+    (Number(classification.lowConfidenceRate ?? 0) || 0) * 100,
+  )
   const closingComplete = processedCount > 0 && needsReviewCount === 0
 
   // balanceHistory 取最新兩筆做月變動 Badge，讓 useBalanceHistory 有實際用途。
@@ -224,6 +233,20 @@ export default function Overview() {
               筆待你審
             </span>
           </div>
+          <p className="text-sm text-muted-foreground">
+            本月分類：已確認{" "}
+            <span className="font-medium text-foreground">
+              {reviewedPercent}%
+            </span>{" "}
+            · 高信心{" "}
+            <span className="font-medium text-foreground">
+              {highConfidencePercent}%
+            </span>{" "}
+            · 低信心{" "}
+            <span className="font-medium text-foreground">
+              {lowConfidencePercent}%
+            </span>
+          </p>
           <div className="grid gap-3 border-y py-3 sm:grid-cols-3 sm:divide-x">
             <div className="sm:pr-3">
               <p className="text-xs text-muted-foreground">規則分類</p>
