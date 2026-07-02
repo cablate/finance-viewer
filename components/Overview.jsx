@@ -296,6 +296,7 @@ export default function Overview() {
       <MonthlyReportSection
         report={monthlyReport}
         monthLabel={monthLabel}
+        needsReviewCount={needsReviewCount}
         onCategoryClick={drillCategory}
         onFixedItemClick={(item) =>
           drill({
@@ -678,10 +679,12 @@ function SpendingDeltaBadge({ delta }) {
 function MonthlyReportSection({
   report,
   monthLabel,
+  needsReviewCount,
   onCategoryClick,
   onFixedItemClick,
 }) {
   if (!report) return null
+  const isSoftLocked = Number(needsReviewCount) > 0
 
   const comparison = report.comparison ?? {}
   const previousMonths = comparison.previousMonths ?? []
@@ -707,7 +710,13 @@ function MonthlyReportSection({
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {isSoftLocked ? (
+        <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+          審完 {needsReviewCount} 筆解鎖完整月報
+        </div>
+      ) : null}
+
+      <div className={`grid gap-4 lg:grid-cols-2 ${isSoftLocked ? "opacity-60" : ""}`}>
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardDescription>本月 vs 常態</CardDescription>
