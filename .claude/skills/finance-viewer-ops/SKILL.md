@@ -1,26 +1,27 @@
 ---
 name: finance-viewer-ops
-description: "Operate Finance Viewer monthly statement workflows with an external AI: parse bank statements, classify transactions, create rules, use web search, learn from corrections, and report QA without duplicating the project playbook. Use when handling monthly imports, Phase 3 redo work, low-confidence review, rule evolution, correction_log learning, or bank statement classification."
+description: "Operate Finance Viewer monthly statement workflows with an external AI: parse bank statements, classify transactions, create rules, use web search, learn from corrections, and report QA from this self-contained skill contract. Use when handling monthly imports, Phase 3 redo work, low-confidence review, rule evolution, correction_log learning, or bank statement classification."
 ---
 
 # Finance Viewer Ops
 
 Use this skill when the user asks to process a bank statement, run a monthly import, classify transactions, improve rules, review low-confidence rows, investigate rule quality, or continue the Finance Viewer Phase 3 workflow.
 
-This skill is an operator layer. The canonical API contract and SOP remain in `prompts/playbook.md`; do not copy or override that contract here.
+This skill is the self-contained operator contract for Finance Viewer statement work. When this skill triggers, read only this skill folder first. Do not require `AGENTS.md` or `prompts/playbook.md` before operating data; those project files are for code maintenance and historical project documentation.
 
 ## Required Reading
 
-Before acting:
+Before acting, read the relevant files inside this skill:
 
-1. Read `AGENTS.md` to confirm repository invariants and privacy constraints.
-2. Read `prompts/playbook.md` fully enough to follow the current workflow and API contract.
-3. Read the relevant references in this skill:
-   - `references/bank-quirks.md` for statement parsing pitfalls.
-   - `references/search-playbook.md` for merchant lookup tactics.
-   - `references/lessons.md` for local operating rules and prior failures.
+1. `references/operator-contract.md` for privacy rules, source-of-truth boundaries, and non-negotiable operating constraints.
+2. `references/monthly-workflow.md` for statement workflow A and correction-learning workflow B.
+3. `references/api-contract.md` for endpoints, schemas, and import/rule payloads.
+4. `references/category-guide.md` for category choices, confidence calibration, and judgment-reason requirements.
+5. `references/bank-quirks.md` for statement parsing pitfalls.
+6. `references/search-playbook.md` for merchant lookup tactics.
+7. `references/lessons.md` for local operating rules and prior failures.
 
-If any line numbers or structure differ from older notes, trust the current files and keep the goal unchanged.
+Only inspect repository implementation files when debugging app behavior or when the user asks for code changes.
 
 ## Source Of Truth Boundaries
 
@@ -28,13 +29,13 @@ Store merchant knowledge in the database, not in this skill.
 
 - Merchant fact: truncated name, normalized `match_key`, real merchant identity, category, confidence, source, and rationale belong in `classification_rules.note` and transaction `judgment_reason`.
 - Workflow knowledge: bank format quirks, search tactics, QA checks, reporting preferences, and operating lessons belong in this skill.
-- Human corrections belong in `correction_log`; use workflow B in `prompts/playbook.md` to turn them into rule updates.
+- Human corrections belong in `correction_log`; use workflow B in `references/monthly-workflow.md` to turn them into rule updates.
 
 Never maintain a parallel merchant dictionary in `references/`. Two sources of truth will drift.
 
 ## Monthly Workflow
 
-Follow `prompts/playbook.md` workflow A exactly.
+Follow workflow A in `references/monthly-workflow.md` exactly.
 
 1. Start with health and metadata checks.
 2. Read the month statement manually and preserve statement order.
@@ -53,7 +54,7 @@ Do not generate ledger CSVs by script. The operator must personally inspect the 
 
 After the user reviews rows in the UI:
 
-1. Run `prompts/playbook.md` workflow B.
+1. Run workflow B in `references/monthly-workflow.md`.
 2. Read `GET /api/corrections?limit=1000`.
 3. Group corrections by `match_key`, source type, direction, old value, and new value.
 4. Patch wrong rules or create missing rules with `origin=human_correction`.
