@@ -351,6 +351,7 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
       const result = await patchTxn(row.id, draft)
       setSavedAt(Date.now())
       onSaved?.(result?.transaction || { ...row, ...draft, classification_source: "human", reviewed: 1 })
+      onClose?.()
     } catch {
       // 失敗 toast 已由 usePatchTxn 處理
     } finally {
