@@ -5,20 +5,20 @@ const { openDatabase, initializeDatabase, DEFAULT_DB_PATH } = require('../lib/db
 
 const RESET = process.argv.includes('--reset');
 
-// 假商家池：name / category / owner / necessity / flow / 金額區間（元）
+// 假商家池：name / category / flow / 金額區間（元）
 const MERCHANTS = [
-  { name: 'GOOGLE*CLOUD', cat: '雲端/開發工具', owner: '事業', nec: '事業必要', flow: '信用卡消費', amt: [300, 1500] },
-  { name: 'GITHUB', cat: '雲端/開發工具', owner: '事業', nec: '事業必要', flow: '信用卡消費', amt: [120, 400] },
-  { name: 'NETFLIX', cat: '社群/娛樂訂閱', owner: '個人', nec: '可優化', flow: '信用卡消費', amt: [270, 450] },
-  { name: 'SPOTIFY', cat: '社群/娛樂訂閱', owner: '個人', nec: '可優化', flow: '信用卡消費', amt: [149, 320] },
-  { name: 'UBER EATS', cat: '餐飲', owner: '個人', nec: '可節省', flow: '信用卡消費', amt: [120, 800] },
-  { name: 'UBER TRIP', cat: '車馬交通', owner: '個人', nec: '必要', flow: '信用卡消費', amt: [85, 500] },
-  { name: 'STARBUCKS', cat: '餐飲', owner: '個人', nec: '可節省', flow: '信用卡消費', amt: [80, 320] },
-  { name: '7-ELEVEN', cat: '生活採買', owner: '個人', nec: '必要', flow: '信用卡消費', amt: [30, 400] },
-  { name: 'IKEA', cat: '住宿', owner: '個人', nec: '可優化', flow: '信用卡消費', amt: [300, 5000] },
-  { name: 'APPLE.COM/BILL', cat: '社群/娛樂訂閱', owner: '個人', nec: '可優化', flow: '信用卡消費', amt: [90, 1190] },
-  { name: 'AMAZON', cat: '服飾/購物', owner: '個人', nec: '可優化', flow: '信用卡消費', amt: [200, 3000] },
-  { name: 'FX 反映手續費', cat: '外幣手續費', owner: '事業', nec: '事業必要', flow: '信用卡消費', amt: [2, 60] },
+  { name: 'GOOGLE*CLOUD', cat: '訂閱服務', flow: '信用卡消費', amt: [300, 1500] },
+  { name: 'GITHUB', cat: '訂閱服務', flow: '信用卡消費', amt: [120, 400] },
+  { name: 'NETFLIX', cat: '訂閱服務', flow: '信用卡消費', amt: [270, 450] },
+  { name: 'SPOTIFY', cat: '訂閱服務', flow: '信用卡消費', amt: [149, 320] },
+  { name: 'UBER EATS', cat: '飲食', flow: '信用卡消費', amt: [120, 800] },
+  { name: 'UBER TRIP', cat: '交通', flow: '信用卡消費', amt: [85, 500] },
+  { name: 'STARBUCKS', cat: '飲食', flow: '信用卡消費', amt: [80, 320] },
+  { name: '7-ELEVEN', cat: '飲食', flow: '信用卡消費', amt: [30, 400] },
+  { name: 'IKEA', cat: '居家', flow: '信用卡消費', amt: [300, 5000] },
+  { name: 'APPLE.COM/BILL', cat: '訂閱服務', flow: '信用卡消費', amt: [90, 1190] },
+  { name: 'AMAZON', cat: '購物', flow: '信用卡消費', amt: [200, 3000] },
+  { name: 'FX 反映手續費', cat: '金融手續與稅費', flow: '信用卡消費', amt: [2, 60] },
 ];
 
 const hashKey = (parts) => crypto.createHash('sha1').update(parts.join('|')).digest('hex');

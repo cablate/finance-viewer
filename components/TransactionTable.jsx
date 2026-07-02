@@ -866,7 +866,7 @@ function TableHeaderCells({ sort, direction, onSort }) {
   )
 }
 
-// ---- 歸屬 / 分類 Badge ----
+// ---- 分類 Badge ----
 function FieldBadge({ value }) {
   if (!value) return <span className="text-xs text-muted-foreground">—</span>
   return <Badge variant="outline">{value}</Badge>
@@ -879,16 +879,6 @@ function CategoryBadge({ row }) {
   const sub = row.category_sub
   const value = main && sub ? `${main} – ${sub}` : main
   return <FieldBadge value={value} />
-}
-
-// 必要性 Badge：語意色編碼層級（必要=中性 / 可節省·可優化=警示琥珀 / 需確認=紅 / 不列入=灰）
-function NecessityBadge({ value }) {
-  if (!value) return <span className="text-xs text-muted-foreground">—</span>
-  let cls = "border-border bg-muted/60 text-foreground"
-  if (value === "可節省" || value === "可優化") cls = "border-warning/40 bg-warning/10 text-warning"
-  else if (value === "需確認") cls = "border-danger/40 bg-danger/10 text-danger"
-  else if (value === "不列入") cls = "border-border bg-muted/40 text-muted-foreground"
-  return <Badge variant="outline" className={cls}>{value}</Badge>
 }
 
 // 給 PaginationLink/Prev/Next 的 href 用：以當前 search params 為底，覆寫 page。

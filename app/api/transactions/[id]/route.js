@@ -50,7 +50,7 @@ export async function GET(request, { params }) {
   }
 }
 
-// PATCH /api/transactions/:id — 單筆人工修正（owner/category/necessity/memo 白名單欄位）。
+// PATCH /api/transactions/:id — 單筆人工修正（category/memo 白名單欄位）。
 // 寫入 + log 由 patchTransaction 包在同一 DB transaction（audit P2#7），這裡只透傳 status/body。
 export async function PATCH(request, { params }) {
   try {

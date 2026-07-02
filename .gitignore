@@ -15,6 +15,7 @@ data/*
 
 # imports (uploaded CSV may contain real statements)
 uploads/
+outputs/
 
 # root 帳單原始 CSV（真實財務，應放 uploads/；若放 root 也要忽略，避免 git add -A 誤 commit）
 cathay-credit-card-*.csv

@@ -147,17 +147,6 @@ const palette = [
 ];
 
 const fixedTagColors = new Map([
-  ['owner:個人', '#2563eb'],
-  ['owner:事業', '#059669'],
-  ['owner:事業候選', '#0f766e'],
-  ['owner:待確認', '#d97706'],
-  ['owner:移轉不算', '#64748b'],
-  ['necessity:必要', '#dc2626'],
-  ['necessity:事業必要', '#be123c'],
-  ['necessity:可節省', '#d97706'],
-  ['necessity:可優化', '#7c3aed'],
-  ['necessity:需確認', '#ea580c'],
-  ['necessity:不列入', '#64748b'],
   ['source:國泰信用卡', '#4f46e5'],
   ['source:國泰帳戶 ****1490', '#0f766e']
 ]);
@@ -306,9 +295,7 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
     VALUES (?, ?, ?, ?, ?)
   `).run(transaction.id, source.id, row.id || row['id'] || keys.importMatchKey, row['來源說明'] || '', row['原始交易資訊'] || '');
 
-  attachTag(db, transaction.id, 'owner', owner);
   attachTag(db, transaction.id, 'category', category);
-  attachTag(db, transaction.id, 'necessity', necessity);
   attachTag(db, transaction.id, 'source', row['來源類型']);
   attachTag(db, transaction.id, 'flow', row['這筆是什麼']);
   if (statementMonth) attachTag(db, transaction.id, 'statement_month', statementMonth);

@@ -50,8 +50,6 @@ const BASE_KEYS = [
   "view",
   "scope",
   "category",
-  "owner",
-  "necessity",
   "search",
   "sort",
   "direction",

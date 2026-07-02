@@ -27,7 +27,7 @@ function toNumber(v) {
 
 // 模擬 AI 第一環分類（關鍵字）。回傳 {main, sub, reason, confidence}。
 // main 對應 STANDARD_CATEGORIES（lib/constants.js）其一；sub 為自由文字子類別（可 null）。
-// MVP 只分 category（owner 事業/個人、necessity 該不該花 是下階段）。
+// MVP 只分 category。
 function classify(name) {
   const n = name.toUpperCase();
   if (/GOOGLE|OPENAI|ANTHROPIC|OSLINK|STEAM|CHATGPT|SUBSCR|MICROSOFT|GITHUB|JETBRAINS|APPLE|CANVA|NOTION/.test(n))

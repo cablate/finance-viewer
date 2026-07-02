@@ -36,7 +36,7 @@ Finance Viewer 反過來 👇
 
 ## ✨ 特色 Features
 
-- 🤝 **外部 AI Agent 友善** — 完整 REST API + [`AGENTS.md`](./AGENTS.md)，Codex / Claude Code 直接打 API 匯入帳單、批次分類、產出分析
+- 🤝 **外部 AI Agent 友善** — 完整 REST API + 操作 playbook（[`prompts/playbook.md`](./prompts/playbook.md)），Codex / Claude Code 直接打 API 匯入帳單、批次分類、產出分析
 - 🎯 **低信心優先審** — AIBanner 提示「AI 沒把握」筆數，一鍵帶到交易明細依信心度排序（最沒把握的排最前）
 - ⚡ **批次修正** — AI 透過 API 批次改、或你在 UI 勾選改
 - 🔍 **全文搜尋** — 交易名稱、備註、分類原因即時搜尋
@@ -101,7 +101,7 @@ npm run seed -- --ledger=path/to/your/ledger.csv
 
 ## 📡 API — 給你的 AI Agent 用
 
-> 完整指引見 [`AGENTS.md`](./AGENTS.md)。本機同源 `http://localhost:3127/api/*`、統一錯誤 envelope。
+> 完整契約與 SOP 見 [`prompts/playbook.md`](./prompts/playbook.md)；開發規則見 [`AGENTS.md`](./AGENTS.md)。本機同源 `http://localhost:3127/api/*`、統一錯誤 envelope。
 
 | Method | Route | 用途 |
 |---|---|---|
@@ -140,7 +140,8 @@ finance-viewer/
 ├─ lib/            db（單例）· queries/（core/transactions/rules/corrections 子模組）· normalize · constants
 │                  · format（cents/100）· constants · api-client · hooks · utils
 ├─ middleware.js   安全標頭（CSP / X-Frame-Options / nosniff / Referrer-Policy）
-├─ AGENTS.md       給外部 AI Agent（Codex/Claude Code）的操作指引
+├─ AGENTS.md       給 AI 編程助手的開發規則（改碼時遵守的不變量與分析角度）
+├─ prompts/        playbook.md — 外部 AI Agent（Codex/Claude Code）操作契約 + SOP
 ├─ scripts/        seed-from-ledger.js · seed-demo.js · migrate-amount-to-cents.js
 └─ data/           finance.sqlite（本機，gitignore 不追蹤）
 ```

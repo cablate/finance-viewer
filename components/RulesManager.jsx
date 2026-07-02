@@ -346,7 +346,7 @@ export default function RulesManager() {
               <EmptyDescription>
                 {filter.q || filter.enabled !== "all" || filter.lowOnly
                   ? "調整篩選條件試試。"
-                  : "AI 分析帳單後會透過 API 寫入規則（見 AGENTS.md）；或按「新增規則」手動建立。"}
+                  : "AI 分析帳單後會透過 API 寫入規則（見 prompts/playbook.md）；或按「新增規則」手動建立。"}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
