@@ -1,6 +1,6 @@
 ---
 name: finance-viewer-ops
-description: Operate Finance Viewer monthly statement workflows with an external AI: parse bank statements, classify transactions, create rules, use web search, learn from corrections, and report QA without duplicating the project playbook.
+description: "Operate Finance Viewer monthly statement workflows with an external AI: parse bank statements, classify transactions, create rules, use web search, learn from corrections, and report QA without duplicating the project playbook. Use when handling monthly imports, Phase 3 redo work, low-confidence review, rule evolution, correction_log learning, or bank statement classification."
 ---
 
 # Finance Viewer Ops
