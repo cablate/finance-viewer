@@ -53,13 +53,13 @@ if (!RESET) {
   }
 }
 
-// 帳戶：一張信用卡 + 一個數位存款帳戶
+// 帳戶：一張信用卡 + 一個存款帳戶
 const cardAcc = db.prepare(
   'INSERT INTO accounts (name, institution, account_type, masked_number) VALUES (?, ?, ?, ?)'
-).run('國泰信用卡 ****1234', '國泰', 'credit', '****1234');
+).run('示範信用卡 ****1234', 'Demo Bank', 'credit', '****1234');
 const bankAcc = db.prepare(
   'INSERT INTO accounts (name, institution, account_type, masked_number) VALUES (?, ?, ?, ?)'
-).run('國泰數位存款 ****5678', '國泰', 'bank', '****5678');
+).run('示範存款帳戶 ****5678', 'Demo Bank', 'bank', '****5678');
 
 const insertTx = db.prepare(`
   INSERT OR IGNORE INTO transactions
@@ -79,7 +79,7 @@ for (let m = 1; m <= 6; m++) {
     const day = String(rand(1, 28)).padStart(2, '0');
     const date = `${month}-${day}`;
     const isCard = Math.random() < 0.75;
-    const sourceType = isCard ? '國泰信用卡' : '國泰數位存款';
+    const sourceType = isCard ? '示範信用卡' : '示範存款帳戶';
     const yuan = rand(mer.amt[0], mer.amt[1]);
     const outflowCents = yuan * 100;
     const amountCents = -outflowCents;
@@ -104,7 +104,7 @@ for (let m = 1; m <= 6; m++) {
        name, amount, inflow, outflow, category_primary, balance, account_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
   `).run(
-    sKey, sKey, sDate, month, '國泰數位存款', '薪水入帳', '每月薪資',
+    sKey, sKey, sDate, month, '示範存款帳戶', '薪水入帳', '每月薪資',
     salaryCents, salaryCents, '薪資收入', bankBalance, bankAcc.lastInsertRowid
   );
   count++;
@@ -112,7 +112,7 @@ for (let m = 1; m <= 6; m++) {
 
 const total = db.prepare('SELECT COUNT(*) AS c FROM transactions').get().c;
 console.log(`✓ demo 資料建立完成：本次處理 ${count} 筆，DB 共 ${total} 筆交易。`);
-console.log(`  帳戶：國泰信用卡 ****1234、國泰數位存款 ****5678`);
+console.log(`  帳戶：示範信用卡 ****1234、示範存款帳戶 ****5678`);
 console.log(`  月份：2026-01 ~ 2026-06`);
 console.log(`  下一步：npm run dev → http://localhost:3127`);
 db.close();

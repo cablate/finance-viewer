@@ -97,7 +97,7 @@ function parseStatementMonth(sourceType, description, transactionMonth) {
   const posted = String(description).match(/(\d{4})-(\d{2})\s+posted statement/);
   if (posted) return `${posted[1]}-${posted[2]}`;
 
-  const creditCsv = String(description).match(/cathay-credit-card-(\d{4})-(\d{2})/);
+  const creditCsv = String(description).match(/(?:[a-z0-9-]+-)?credit-card-(\d{4})-(\d{2})/i);
   if (creditCsv) return `${creditCsv[1]}-${creditCsv[2]}`;
 
   if (sourceType.includes('信用卡')) return transactionMonth || null;
@@ -147,8 +147,8 @@ const palette = [
 ];
 
 const fixedTagColors = new Map([
-  ['source:國泰信用卡', '#4f46e5'],
-  ['source:國泰帳戶 ****1490', '#0f766e']
+  ['source:示範信用卡', '#4f46e5'],
+  ['source:示範帳戶 ****1490', '#0f766e']
 ]);
 
 function colorFor(tagType, name) {
@@ -172,7 +172,7 @@ function upsertAccount(db, sourceType, rawInfo) {
   const masked = maskedNumber(sourceType, rawInfo);
   db.prepare(`
     INSERT INTO accounts (name, institution, account_type, masked_number)
-    VALUES (?, '國泰', ?, ?)
+    VALUES (?, 'Imported Source', ?, ?)
     ON CONFLICT(name) DO UPDATE SET
       account_type = excluded.account_type,
       masked_number = COALESCE(excluded.masked_number, accounts.masked_number)

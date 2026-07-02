@@ -86,7 +86,7 @@ function ResultBadges({ rule }) {
 
 function ConditionText({ rule }) {
   const parts = []
-  // 顯示代表交易名（原始，可能截斷——國泰帳單原始資料就這樣）為主；技術 match_key 收到 tooltip。
+  // 顯示代表交易名（原始，可能因銀行帳單而截斷）為主；技術 match_key 收到 tooltip。
   const nameToShow = rule.sample_name || rule.match_key
   if (nameToShow) parts.push(nameToShow)
   if (rule.source_type) parts.push(rule.source_type)
@@ -200,7 +200,7 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="f-st" className="text-xs">來源 / 帳戶</Label>
-                  <Input id="f-st" value={form.source_type} onChange={(e) => set("source_type", e.target.value)} placeholder="例：國泰信用卡" />
+                  <Input id="f-st" value={form.source_type} onChange={(e) => set("source_type", e.target.value)} placeholder="例：示範信用卡" />
                 </div>
                 <div>
                   <Label className="text-xs">方向</Label>
