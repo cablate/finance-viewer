@@ -5,6 +5,7 @@ import { TrendingUp } from "lucide-react"
 
 import { useTrend } from "@/lib/hooks"
 import { formatMonth, formatTWD } from "@/lib/format"
+import AutomationRateChart from "@/components/charts/AutomationRateChart"
 import TrendChart from "@/components/charts/TrendChart"
 
 import {
@@ -95,45 +96,78 @@ export default function TrendView() {
   if (error) throw error
 
   const trend = Array.isArray(data) ? data : []
+  const automationTrend = trend.filter(
+    (row) =>
+      row?.month &&
+      Number(row.rows) > 0 &&
+      Number.isFinite(Number(row.automationRate)),
+  )
+  const showAutomationTrend = automationTrend.length >= 2
+  const firstAutomation = showAutomationTrend
+    ? automationTrend[0].automationRate
+    : 0
+  const lastAutomation = showAutomationTrend
+    ? automationTrend[automationTrend.length - 1].automationRate
+    : 0
 
   return (
-    <Card aria-busy={loading || undefined}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden />
-          每月支出走勢
-        </CardTitle>
-        <CardDescription>
-          各月總支出，圖表附無障礙資料表。
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-6">
-        {loading ? (
-          <TrendSkeleton />
-        ) : trend.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <TrendingUp />
-              </EmptyMedia>
-              <EmptyTitle>尚無支出資料</EmptyTitle>
-              <EmptyDescription>
-                目前篩選條件下找不到任何月份的支出紀錄。
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <>
-            <TrendChart data={trend} />
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium text-muted-foreground">
-                月份明細
-              </h3>
-              <TrendTable data={trend} />
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-6">
+      {!loading && showAutomationTrend ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden />
+              規則自動化率——越用越省力
+            </CardTitle>
+            <CardDescription>
+              從 {Number(firstAutomation).toFixed(1)}% 到{" "}
+              {Number(lastAutomation).toFixed(1)}%，規則庫開始接手重複判斷。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AutomationRateChart data={automationTrend} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card aria-busy={loading || undefined}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden />
+            每月支出走勢
+          </CardTitle>
+          <CardDescription>
+            各月總支出，圖表附無障礙資料表。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          {loading ? (
+            <TrendSkeleton />
+          ) : trend.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <TrendingUp />
+                </EmptyMedia>
+                <EmptyTitle>尚無支出資料</EmptyTitle>
+                <EmptyDescription>
+                  目前篩選條件下找不到任何月份的支出紀錄。
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <>
+              <TrendChart data={trend} />
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  月份明細
+                </h3>
+                <TrendTable data={trend} />
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }

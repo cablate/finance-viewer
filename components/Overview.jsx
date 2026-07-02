@@ -6,12 +6,12 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
-  Briefcase,
+  CheckCircle2,
+  ListChecks,
   Landmark,
   PiggyBank,
   Receipt,
   TrendingUp,
-  Users,
   Wallet,
 } from "lucide-react"
 
@@ -132,6 +132,16 @@ export default function Overview() {
   const netCash = Number(summary?.netCashMovement ?? 0)
   const netCashPositive = netCash > 0
   const netCashNegative = netCash < 0
+  const classification = summary?.classification ?? {}
+  const processedCount = Number(classification.total ?? summary?.rows ?? 0) || 0
+  const ruleCount = Number(classification.rule ?? 0) || 0
+  const aiCount = Number(classification.ai ?? 0) || 0
+  const humanCount = Number(classification.human ?? 0) || 0
+  const needsReviewCount = Number(classification.needsReview ?? 0) || 0
+  const automationPercent = Math.round(
+    (Number(classification.automationRate ?? 0) || 0) * 100,
+  )
+  const closingComplete = processedCount > 0 && needsReviewCount === 0
 
   // balanceHistory 取最新兩筆做月變動 Badge，讓 useBalanceHistory 有實際用途。
   const latestBalanceEntry =
@@ -169,6 +179,90 @@ export default function Overview() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardDescription>{monthLabel} 月結狀態</CardDescription>
+          <CardTitle className="text-2xl">AI 已完成初步分類</CardTitle>
+          <CardAction>
+            {closingComplete ? (
+              <Badge variant="secondary">
+                <CheckCircle2 className="h-3 w-3" />
+                本月已全數確認
+              </Badge>
+            ) : (
+              <Badge variant="outline">{needsReviewCount} 筆待審</Badge>
+            )}
+          </CardAction>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            <span>
+              <span className="font-medium text-foreground">
+                {processedCount}
+              </span>{" "}
+              筆已處理
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              <span className="font-medium text-foreground">
+                {automationPercent}%
+              </span>{" "}
+              規則自動
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              <span className="font-medium text-foreground">
+                {needsReviewCount}
+              </span>{" "}
+              筆待你審
+            </span>
+          </div>
+          <div className="grid gap-3 border-y py-3 sm:grid-cols-3 sm:divide-x">
+            <div className="sm:pr-3">
+              <p className="text-xs text-muted-foreground">規則分類</p>
+              <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
+                {ruleCount}
+              </p>
+            </div>
+            <div className="sm:px-3">
+              <p className="text-xs text-muted-foreground">AI 判斷</p>
+              <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
+                {aiCount}
+              </p>
+            </div>
+            <div className="sm:pl-3">
+              <p className="text-xs text-muted-foreground">人工確認</p>
+              <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
+                {humanCount}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {closingComplete
+                ? "目前篩選月份沒有待審交易。"
+                : "先處理低信心項目，月結數字才會更穩。"}
+            </p>
+            <Button
+              type="button"
+              variant={needsReviewCount > 0 ? "default" : "outline"}
+              onClick={() =>
+                drill({
+                  view: "needs-review",
+                  sort: "confidence",
+                  direction: "asc",
+                  page: null,
+                })
+              }
+            >
+              <ListChecks data-icon="inline-start" />
+              前往審查
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Hero 淨現金流 */}
       <Card>
         <CardHeader>

@@ -98,11 +98,13 @@ export default function TrendChart({ data = [], ariaLabel = "支出走勢圖" })
             </linearGradient>
           </defs>
           <Area
+            id="trend-spend-area"
             type="monotone"
             dataKey="spend"
             stroke="var(--color-spend)"
             fill="url(#trendSpend)"
             strokeWidth={2}
+            isAnimationActive={false}
           />
         </AreaChart>
       </ChartContainer>
