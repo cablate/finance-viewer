@@ -75,14 +75,6 @@ import {
 } from "@/components/ui/empty"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -217,26 +209,18 @@ function SortButton({ column, currentSort, currentDir, onSort }) {
   )
 }
 
-function CategoryCombobox({ id, value, onValueChange, options, autoFocus = false }) {
+function CategoryPicker({ id, value, onValueChange, options }) {
   return (
-    <Command className="rounded-md border">
-      <CommandInput id={id} placeholder="搜尋分類" autoFocus={autoFocus} />
-      <CommandList>
-        <CommandEmpty>沒有符合的分類</CommandEmpty>
-        <CommandGroup>
-          {options.map((option) => (
-            <CommandItem
-              key={option}
-              value={option}
-              data-checked={value === option}
-              onSelect={() => onValueChange(option)}
-            >
-              {option}
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </Command>
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger id={id} className="w-full">
+        <SelectValue placeholder="選擇分類" />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option} value={option}>{option}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -320,7 +304,7 @@ function RuleCreateDialog({ open, onOpenChange, seed, onSaved }) {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="rule-category">分類</Label>
-            <CategoryCombobox
+            <CategoryPicker
               id="rule-category"
               value={form.category_value}
               onValueChange={(v) => set("category_value", v)}
@@ -342,7 +326,7 @@ function RuleCreateDialog({ open, onOpenChange, seed, onSaved }) {
 }
 
 // ---- 展開列：行內編輯單筆 ----
-function TransactionEditPanel({ row, categoryOptions, onSaved, onClose, autoFocusCategory = false }) {
+function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
   const patchTxn = usePatchTxn()
   const [draft, setDraft] = useState({
     category_primary: row.category_primary ?? "",
@@ -378,12 +362,11 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose, autoFocu
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`edit-category-${row.id}`}>分類</Label>
-        <CategoryCombobox
+        <CategoryPicker
           id={`edit-category-${row.id}`}
           value={draft.category_primary}
           onValueChange={set("category_primary")}
           options={categoryOptions}
-          autoFocus={autoFocusCategory}
         />
       </div>
 
@@ -861,7 +844,7 @@ export default function TransactionTable() {
                       <CategoryBadge row={group.rows[0]} />
                     </div>
                   </div>
-                  <CategoryCombobox
+                  <CategoryPicker
                     id={`group-category-${group.key}`}
                     value={currentCategory}
                     onValueChange={(category) => handleGroupApply(group, category)}
@@ -1031,7 +1014,6 @@ export default function TransactionTable() {
                               categoryOptions={categoryOptions}
                               onSaved={handleSaved}
                               onClose={() => setSelectedTxnId(null)}
-                              autoFocusCategory
                             />
                           </TableCell>
                         </TableRow>
@@ -1121,7 +1103,6 @@ export default function TransactionTable() {
                         categoryOptions={categoryOptions}
                         onSaved={handleSaved}
                         onClose={() => setSelectedTxnId(null)}
-                        autoFocusCategory
                       />
                     </div>
                   ) : null}

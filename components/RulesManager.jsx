@@ -33,9 +33,6 @@ import {
   Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription,
 } from "@/components/ui/empty"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import {
-  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
-} from "@/components/ui/command"
 
 const DIRECTION_LABEL = { in: "轉入", out: "轉出" }
 const ORIGIN_LABEL = { ai_analysis: "AI 分析", human_correction: "人工校正", bootstrap: "冷啟動" }
@@ -120,26 +117,18 @@ function toForm(rule) {
   }
 }
 
-function CategoryCombobox({ id, value, onValueChange }) {
+function CategoryPicker({ id, value, onValueChange }) {
   return (
-    <Command className="rounded-md border">
-      <CommandInput id={id} placeholder="搜尋標準分類" />
-      <CommandList>
-        <CommandEmpty>沒有符合的標準分類</CommandEmpty>
-        <CommandGroup>
-          {STANDARD_CATEGORIES.map((option) => (
-            <CommandItem
-              key={option}
-              value={option}
-              data-checked={value === option}
-              onSelect={() => onValueChange(option)}
-            >
-              {option}
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </Command>
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger id={id} className="w-full">
+        <SelectValue placeholder="選擇標準分類" />
+      </SelectTrigger>
+      <SelectContent>
+        {STANDARD_CATEGORIES.map((option) => (
+          <SelectItem key={option} value={option}>{option}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -241,7 +230,7 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
                   </AlertDescription>
                 </Alert>
               ) : null}
-              <CategoryCombobox id="f-cat" value={form.category_value} onValueChange={(v) => set("category_value", v)} />
+              <CategoryPicker id="f-cat" value={form.category_value} onValueChange={(v) => set("category_value", v)} />
             </div>
           </div>
 
