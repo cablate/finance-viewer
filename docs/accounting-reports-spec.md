@@ -50,7 +50,7 @@ uncommitted UI/import changes unrelated to this planning file.
 | External AI contract | `prompts/playbook.md` is self-contained and documents current API routes, ledger CSV schema, rule contract, and correction loop. | Any new operator fields or APIs require playbook updates in the same phase. |
 | Runtime | `package.json` uses Next.js, React, `node:sqlite`, and `node --test`; `FINANCE_DB_PATH` can point tests at a non-real DB. | Tests and demos must use temp/demo DB paths, never `data/finance.sqlite`. |
 | Existing schema | `lib/db.js` creates `accounts`, `sources`, `classification_rules`, `transactions`, `transaction_sources`, `tags`, `transaction_tags`, and append-only `correction_log`. | New report tables should be additive; do not replace `transactions`. |
-| Existing migrations | `lib/db.js` has idempotent `migrateSchema(db)` with `ALTER TABLE` checks, but no versioned migration ledger. | Multi-table accounting work needs a migration convention before schema growth. |
+| Existing migrations | `lib/db.js` runs an idempotent `migrateSchema(db)` (internal, not exported) with `ALTER TABLE` checks via `initializeDatabase`/`getDb`, but has no versioned migration ledger. | Multi-table accounting work needs a migration convention before schema growth. Do not call `migrateSchema` directly — it is not in `module.exports`; trigger it through `initializeDatabase`/`getDb`. |
 | Current account model | `accounts` has `name`, `institution`, `account_type`, and `masked_number`. | It is not enough for statement reporting; account kind, role, entity, active flag, and currency are needed. |
 | Transaction model | `transactions` already has transaction date/month, statement month, source type, flow type, amount/inflow/outflow, category, confidence, reason, memo, balance, account, classification source, rule id, and reviewed flag. | Phase 1 P&L can start from reviewed transaction rows plus report-line mappings. |
 | Category constants | `lib/constants.js` defines 14 user-facing categories and only `category_primary`/`memo` as editable. | Accounting report lines must be separate from user-facing categories. |
@@ -767,13 +767,21 @@ Implementation constraints:
 - Use anonymized demo data only.
 - Define acceptance examples before adding report APIs.
 - If a migration ledger is added, it must coexist with existing
-  `migrateSchema(db)` and existing DBs.
+  `migrateSchema(db)` (internal, triggered via `initializeDatabase`/`getDb`,
+  not exported) and existing DBs.
 
 Validation:
 
 ```powershell
+# Windows PowerShell
 git diff --check -- docs/accounting-reports-spec.md docs/contracts
 $env:FINANCE_DB_PATH="data/reporting-phase0.test.sqlite"; npm test -- test/normalize.test.js test/import-dedupe.test.js
+```
+
+```bash
+# macOS / Linux (bash, zsh) — bare VAR=val works in POSIX shells
+git diff --check -- docs/accounting-reports-spec.md docs/contracts
+FINANCE_DB_PATH=data/reporting-phase0.test.sqlite npm test -- test/normalize.test.js test/import-dedupe.test.js
 ```
 
 Done when:
@@ -839,7 +847,16 @@ Compatibility rules:
 Validation:
 
 ```powershell
+# Windows PowerShell
 $env:FINANCE_DB_PATH="data/reporting-phase1.test.sqlite"; npm test -- test/reporting-income-statement.test.js test/import-dedupe.test.js test/reviewed-on-correction.test.js
+npm run build
+# If UI is implemented in this phase, capture desktop and mobile screenshots
+# against a demo DB and verify partial/empty/complete states.
+```
+
+```bash
+# macOS / Linux (bash, zsh)
+FINANCE_DB_PATH=data/reporting-phase1.test.sqlite npm test -- test/reporting-income-statement.test.js test/import-dedupe.test.js test/reviewed-on-correction.test.js
 npm run build
 # If UI is implemented in this phase, capture desktop and mobile screenshots
 # against a demo DB and verify partial/empty/complete states.
@@ -899,7 +916,14 @@ Compatibility rules:
 Validation:
 
 ```powershell
+# Windows PowerShell
 $env:FINANCE_DB_PATH="data/reporting-phase2.test.sqlite"; npm test -- test/reporting-balance-sheet.test.js test/reporting-income-statement.test.js
+npm run build
+```
+
+```bash
+# macOS / Linux (bash, zsh)
+FINANCE_DB_PATH=data/reporting-phase2.test.sqlite npm test -- test/reporting-balance-sheet.test.js test/reporting-income-statement.test.js
 npm run build
 ```
 
@@ -954,7 +978,14 @@ Compatibility rules:
 Validation:
 
 ```powershell
+# Windows PowerShell
 $env:FINANCE_DB_PATH="data/reporting-phase3.test.sqlite"; npm test -- test/transfer-matching.test.js test/reporting-cash-flow.test.js test/reporting-balance-sheet.test.js
+npm run build
+```
+
+```bash
+# macOS / Linux (bash, zsh)
+FINANCE_DB_PATH=data/reporting-phase3.test.sqlite npm test -- test/transfer-matching.test.js test/reporting-cash-flow.test.js test/reporting-balance-sheet.test.js
 npm run build
 ```
 
@@ -994,7 +1025,14 @@ Compatibility rules:
 Validation:
 
 ```powershell
+# Windows PowerShell
 $env:FINANCE_DB_PATH="data/reporting-phase4.test.sqlite"; npm test -- test/manual-journal-entries.test.js test/reporting-income-statement.test.js test/reporting-balance-sheet.test.js
+npm run build
+```
+
+```bash
+# macOS / Linux (bash, zsh)
+FINANCE_DB_PATH=data/reporting-phase4.test.sqlite npm test -- test/manual-journal-entries.test.js test/reporting-income-statement.test.js test/reporting-balance-sheet.test.js
 npm run build
 ```
 
@@ -1148,7 +1186,10 @@ Test rules:
   for expense category detail.
 - D6: Versioned migrations.
   Default: introduce the smallest migration ledger before adding multiple report
-  tables, while preserving existing `migrateSchema(db)` compatibility.
+  tables, while preserving existing `migrateSchema(db)` compatibility. Note:
+  `migrateSchema` is internal (not in `module.exports`); it runs through
+  `initializeDatabase`/`getDb`. Any migration ledger must hook into that same
+  path rather than calling `migrateSchema` directly.
 
 ## Execution Readiness Verdict
 

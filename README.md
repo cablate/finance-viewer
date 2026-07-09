@@ -52,22 +52,40 @@ Finance Viewer 是一個**本機財務資料伺服器**（SQLite + REST API + We
 
 ## 快速開始
 
+**Prerequisites** — [Node.js](https://nodejs.org) ≥ 22.5（建議用 [nvm](https://github.com/nvm-sh/nvm) / [nvs](https://github.com/jasongin/nvs) 管理版本）與 [git](https://git-scm.com)。驗證：`node -v` 應顯示 v22.5 以上。
+
 ```bash
 git clone https://github.com/cablate/finance-viewer
 cd finance-viewer
 npm install
-npm run seed:demo   # 產生 6 個月示範資料（不含任何真實個資）
+npm run seed:demo   # 必跑：否則 UI 空白
 npm run dev         # → http://localhost:3127
 ```
 
-> 已經有正式資料、想另開隔離的 demo 庫時，加上 `FINANCE_DB_PATH=data/dev-demo.sqlite`（PowerShell：`$env:FINANCE_DB_PATH="data/dev-demo.sqlite"`）。
+> 已經有正式資料、想另開隔離的 demo 庫時，用 `FINANCE_DB_PATH` 指定另一個 SQLite 路徑，依你的 shell：
+>
+> ```bash
+> # bash / zsh
+> FINANCE_DB_PATH=data/dev-demo.sqlite npm run dev
+> # 或先 export：export FINANCE_DB_PATH=data/dev-demo.sqlite
+> ```
+> ```powershell
+> # PowerShell
+> $env:FINANCE_DB_PATH="data/dev-demo.sqlite"; npm run dev
+> ```
+> ```cmd
+> :: Windows cmd
+> set FINANCE_DB_PATH=data\dev-demo.sqlite && npm run dev
+> ```
+
+> **Port 衝突** — 預設 port 3127 若已被佔，`dev` 會自動改用 3128（看終端 `Port ... is in use` 訊息）。要固定 port 的話，改 `package.json` 中 `dev` script 的 `-p` 參數。
 
 ### 用你自己的帳單
 
 啟動 server 後，把這段貼給你的 AI agent：
 
 ```text
-我架好了 Finance Viewer（localhost:3127），請讀專案的 prompts/playbook.md，
+我架好了 Finance Viewer（localhost:3127，port 以實際 dev 啟動訊息為準），請讀專案的 prompts/playbook.md，
 照流程 A 處理我這份帳單：<檔案路徑>
 ```
 

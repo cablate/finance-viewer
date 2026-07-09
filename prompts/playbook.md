@@ -1,7 +1,8 @@
 # Finance Viewer 操作 Playbook（給 Claude / Codex）
 
 > **何時用**：使用者請你處理一張帳單（分類／匯入），或說「我改了一些分類，幫我更新規則」「規則不準，幫我調」。
-> **你的角色**：Finance Viewer（本機 `http://localhost:3127`）的外部 AI 操作員。**工具本身只做 CRUD + 機械式規則套用；所有「讀格式、理解、分類、判斷」由你做。**
+> **你的角色**：Finance Viewer（本機伺服器）的外部 AI 操作員。**工具本身只做 CRUD + 機械式規則套用；所有「讀格式、理解、分類、判斷」由你做。**
+> **port**：以實際 dev 啟動訊息印出的 port 為準（非寫死 3127——port 可能被佔而換到別的）。所有文件中 `http://localhost:3127` 僅為示意，實作時替換成當前實際 port。
 > 本檔自含**完整系統契約**（附錄一～三：API 表、資料模型、規則契約）＋ 操作 SOP。若你的任務是**修改這包程式碼**（開發／審查／規劃功能），改讀 `AGENTS.md`。
 
 ## 核心心智模型
@@ -51,7 +52,7 @@
 對沒被規則覆蓋的每筆：
 
 1. **分類**：
-   - `category`：用標準 14 類（見下方，只能選這些）
+   - `category`：用標準 14 類（見下方，只能選這些）。⚠ **工具不做 category 白名單硬校驗**——你傳任何字串都會被接受，但偏離 14 類會讓後續報表映射、統計彙總失效。**AI 須自行對齊 14 類**；14 類清單可由 `GET /api/meta` 取得（與下方表格一致）。
    - `category_sub`：自由文字子類別，但先 `GET /api/meta` 看既有子類別，能複用就複用（「咖啡」不要又造「咖啡廳」「咖啡店」）。新商家型態才造新詞，2-4 字名詞。
 2. **信心度** 0~1：沒把握就給低（0.3~0.5），低信心會排到人類審查前面讓人複核。
 
@@ -121,13 +122,15 @@
   ```
 - 這些規則給**未來月份**用。信心 < 0.6 的不建規則，留給人類審。
 - ⚠ **泛名／銀行操作不建規則**：「電子轉出」「轉帳」「繳費」「利息」「手續費」等**非商家描述**（match_key 無區別力，建規則會誤套到所有同名交易）。這類用 `flow_type`（移轉／繳款／非消費）區分，不靠商家規則；匯入時就標對 flow_type 排除出消費統計。
+- ⚠ **空 match_key 不可建規則**：normalize 結果若為**空字串**（如 `7-11`→`711` 再去數字後變空、純數字、純符號名稱），建規則會被系統 **400 拒絕**（空比對鍵無區別力）。這類商家改在 **CSV 匯入時直接分類**（ledger CSV 填好 category/信心度），不靠規則。產規則前用 `GET /api/rules/normalize?text=...` 先確認 match_key 非空。
 - 兩側各至少一項（至少一個條件 + 一個結果值），否則 POST 400。
 
 ### A5. 產 CSV 匯入
-產 ledger CSV，欄位順序（每筆一行）：
+產 ledger CSV，欄位順序（每筆一行，共 17 欄）：
 ```
 來源類型,來源說明,日期,月份,名稱,金額,流入,流出,帳戶餘額,帳戶原始排序,原始交易資訊,這筆是什麼,分類,子類別,信心度,判斷理由,備註
 ```
+**必填欄位（值不可為空 / undefined）**：`日期`、`月份`、`名稱`、`金額`。空字串可、`undefined`/缺欄不行。`來源類型`強烈建議填（規則比對與來源追溯都靠它）。
 - `日期` = `YYYY-MM-DD`、`月份` = `YYYY-MM`
 - `金額`：消費寫 `-金額`、流入=`金額`、流出=`0`；繳款反過來（流入=正、流出=0）
 - `分類` = category 主類別、`子類別` = 自由文字（如「便利商店」「餐飲」）、`信心度` = 你的信心
@@ -181,7 +184,7 @@
 ### C0. 先查現況
 `GET /api/reports/income-statement?month=2026-06` —— 看：
 - `total_revenue_cents / total_expense_cents / net_income_cents`：損益數字（cents，除 100 顯示）。
-- `review_items`：**沒對到 report_line 的交易**（前 25 筆）——這些是你的工作區。
+- `review_items`：**沒對到 report_line 的交易**（前 25 筆）——這些是你的工作區。⚠ `review_items[].id` **即為 `POST /api/reports/mappings` 的 `transaction_id`**（同一個值，直接帶入，不必另查）。
 - `coverage`：覆蓋率、已審比例、basis / 期間等詮釋資料。
 
 ### C1. 處理未映射交易（逐筆 mapping）
@@ -195,10 +198,10 @@
   "note": "websearch 確認「五十嵐 左營店」"
 }
 ```
-- `transaction_id`（必填，正整數）、`report_line`（必填，須在白名單）。
+- `transaction_id`（必填，正整數；即 `review_items[].id`）、`report_line`（必填，須在白名單）。
 - `mapping_source` 選填，預設 `ai`。
 - `confidence` 選填 0~1；`reason` / `note` 選填（note 會附加到 reason）。
-- 寫入為 **INSERT OR REPLACE**（同一 transaction_id 重寫即覆蓋）。回 `{ok, transaction_id, report_line}`。
+- 寫入為 **INSERT OR REPLACE**（同一 transaction_id 重寫即覆蓋）。⚠ **重寫時欄位為合併語意**：未重新帶入的 `confidence` / `reason` / `note` 會**保留原值**（部分更新，非整筆替換）。若要清空某欄，需顯式帶空值。回 `{ok, transaction_id, report_line}`。
 
 **report_line 白名單**（只能用這些，完整清單以 `lib/reporting/report-lines.js` 為準；改清單 = 多點同步，見 AGENTS.md）：
 
@@ -261,34 +264,36 @@
 
 ## 附錄一：API 契約
 
-server：使用者已架設 `http://localhost:3127`（同源 `/api/*`）。先 `GET /api/health` 確認連線。所有 API 回 JSON，統一錯誤 `{error}` envelope。
+server：使用者已架設本機伺服器（port 以 dev 啟動訊息為準，非寫死 3127；同源 `/api/*`）。先 `GET /api/health` 確認連線。所有 API 回 JSON，統一錯誤 `{error}` envelope。
 
-| Method | Route | 用途 |
-|---|---|---|
-| GET | `/api/health` | 確認 server + DB（回 `{ok, transactions, corrections}`） |
-| GET | `/api/meta` | 月份 / 分類 等篩選選項（含 needsReview 待審計數） |
-| GET | `/api/summary?month=&scope=&view=` | 月度摘要（各類支出、淨現金流、儲蓄率） |
-| GET | `/api/transactions?month=&scope=&category=&search=&sort=&limit=&offset=` | 交易列表（limit 上限 2000） |
-| GET | `/api/transactions/:id` | 單筆明細 |
-| PATCH | `/api/transactions/:id` | 單筆修正（body 見白名單） |
-| POST | `/api/transactions/batch` | 批次修正（body `{corrections:[{id, ...fields}]}`，上限 500） |
-| GET | `/api/corrections?field=&matchKey=&limit=` | 修正歷史明細 + summary（你的「學習資產」原料） |
-| GET | `/api/transactions?view=needs-review&sort=confidence&direction=asc` | 低信心／未審交易（你沒把握的，依信心升序） |
-| GET | `/api/spending?month=&category=&scope=` | 消費統計 |
-| GET | `/api/breakdown?dimension=&month=` | 分類 維度分布 |
-| GET | `/api/trend?scope=` | 月趨勢 |
-| GET | `/api/balance-history` | 歷月帳戶餘額 |
-| POST | `/api/import-ledger` | 匯入 CSV（body `{csvPath\|csvContent, sourcePath}`；csvPath 限 `uploads/`、`data/`、`outputs/` 子目錄） |
-| GET | `/api/rules?enabled=&maxConfidence=&origin=&q=` | 列分類規則（給 UI / 你檢視） |
-| POST | `/api/rules` | 新增規則（body 見 A4；匯入時自動套用） |
-| GET | `/api/rules/:id` | 單筆規則 |
-| PATCH | `/api/rules/:id` | 更新規則（body 僅 `{enabled}` → 快速啟停；否則部分更新） |
-| DELETE | `/api/rules/:id` | 刪除規則（已套用的交易保留，僅斷連結） |
-| GET | `/api/rules/normalize?text=` | 正規化預覽（產規則前驗證 match_key） |
-| GET | `/api/reports/income-statement?month=&entity_id=&basis=&currency=` | 管理用損益表（回 `revenue`/`expenses`/`excluded` 各列、`total_revenue_cents`/`total_expense_cents`/`net_income_cents`、`coverage`、未映射的 `review_items`；basis=`card_accrual_management`\|`cash`，見流程 C） |
-| POST | `/api/reports/mappings` | 寫逐筆報表映射（body `{transaction_id, report_line, mapping_source?, confidence?, reason?, note?}`；report_line 白名單見流程 C） |
-| POST | `/api/reports/mapping-rules` | 建報表映射規則（body `{match_key?, source_type?, direction?, report_line, confidence?, reason?, note?, enabled?}`） |
-| POST | `/api/transactions/review` | 批次標 reviewed（body `{ids:[...]}`，上限 500；隱性正向信號，不影響分類） |
+| Method | Route | Status | 用途 |
+|---|---|---|---|
+| GET | `/api/health` | 200 | 確認 server + DB（回 `{ok, transactions, corrections}`） |
+| GET | `/api/meta` | 200 | 月份 / 分類 等篩選選項（含 needsReview 待審計數） |
+| GET | `/api/summary?month=&scope=&view=` | 200 | 月度摘要（各類支出、淨現金流、儲蓄率） |
+| GET | `/api/transactions?month=&scope=&category=&search=&sort=&limit=&offset=` | 200 | 交易列表（limit 上限 2000） |
+| GET | `/api/transactions/:id` | 200 | 單筆明細 |
+| PATCH | `/api/transactions/:id` | 200 | 單筆修正（body 見白名單） |
+| POST | `/api/transactions/batch` | 200 | 批次修正（body `{corrections:[{id, ...fields}]}`，上限 500） |
+| GET | `/api/corrections?field=&matchKey=&limit=` | 200 | 修正歷史明細 + summary（你的「學習資產」原料） |
+| GET | `/api/transactions?view=needs-review&sort=confidence&direction=asc` | 200 | 低信心／未審交易（你沒把握的，依信心升序） |
+| GET | `/api/spending?month=&category=&scope=` | 200 | 消費統計 |
+| GET | `/api/breakdown?dimension=&month=` | 200 | 分類 維度分布 |
+| GET | `/api/trend?scope=` | 200 | 月趨勢 |
+| GET | `/api/balance-history` | 200 | 歷月帳戶餘額 |
+| POST | `/api/import-ledger` | 200 | 匯入 CSV（body `{csvPath\|csvContent, sourcePath}`；csvPath 限 `uploads/`、`data/`、`outputs/` 子目錄） |
+| GET | `/api/rules?enabled=&maxConfidence=&origin=&q=` | 200 | 列分類規則（給 UI / 你檢視） |
+| POST | `/api/rules` | **201** | 新增規則（body 見 A4；匯入時自動套用） |
+| GET | `/api/rules/:id` | 200 | 單筆規則 |
+| PATCH | `/api/rules/:id` | 200 | 更新規則（body 僅 `{enabled}` → 快速啟停；否則部分更新） |
+| DELETE | `/api/rules/:id` | 200 | 刪除規則（已套用的交易保留，僅斷連結） |
+| GET | `/api/rules/normalize?text=` | 200 | 正規化預覽（產規則前驗證 match_key） |
+| GET | `/api/reports/income-statement?month=&entity_id=&basis=&currency=` | 200 | 管理用損益表（回 `revenue`/`expenses`/`excluded` 各列、`total_revenue_cents`/`total_expense_cents`/`net_income_cents`、`coverage`、未映射的 `review_items`；basis=`card_accrual_management`\|`cash`，見流程 C） |
+| POST | `/api/reports/mappings` | **201** | 寫逐筆報表映射（body `{transaction_id, report_line, mapping_source?, confidence?, reason?, note?}`；report_line 白名單見流程 C） |
+| POST | `/api/reports/mapping-rules` | **201** | 建報表映射規則（body `{match_key?, source_type?, direction?, report_line, confidence?, reason?, note?, enabled?}`） |
+| POST | `/api/transactions/review` | 200 | 批次標 reviewed（body `{ids:[...]}`，上限 500；隱性正向信號，不影響分類） |
+
+> **成功判斷**：用 `resp.ok`（2xx 即成功），**勿 hardcode `=== 200`**——`POST /api/rules`、`/api/reports/mappings`、`/api/reports/mapping-rules` 成功回 **201**，hardcode 200 會把這些新增誤判為失敗。錯誤回 4xx/5xx + `{error}`。
 
 ### 可編輯欄位白名單（PATCH / batch）
 
