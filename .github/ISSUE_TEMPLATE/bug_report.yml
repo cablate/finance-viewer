@@ -1,0 +1,52 @@
+name: Bug report
+description: 回報可重現的錯誤；請勿附上真實財務資料
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感謝回報。請使用 demo 或去識別化資料重現，不要貼真實交易、卡號、帳戶、餘額或資料庫。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 發生什麼事？
+      description: 說明實際結果與你預期的結果。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟
+      placeholder: |
+        1. 啟動...
+        2. 前往...
+        3. 點擊...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit 或版本
+      placeholder: git rev-parse --short HEAD
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 環境
+      placeholder: Windows 11 / Node 22.19 / Chrome 135
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 去識別化證據
+      description: 可附錯誤訊息或 demo screenshot；請先移除任何個資與財務內容。
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隱私確認
+      options:
+        - label: 我確認內容不含真實帳單、交易、卡號、帳戶、餘額或其他個資。
+          required: true

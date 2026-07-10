@@ -1,0 +1,37 @@
+name: Feature request
+description: 提議能降低財務整理或審查成本的改進
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: 使用情境
+      description: 你現在如何完成這件事？哪一步最花時間或最容易出錯？
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 希望得到的結果
+      description: 請描述可觀察的成果，不必先決定技術作法。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 試過的替代方法
+  - type: dropdown
+    id: area
+    attributes:
+      label: 主要範圍
+      options:
+        - 帳單解析與匯入
+        - AI operator / Skill
+        - 人工待審流程
+        - 分類規則與學習
+        - 總覽與報表
+        - 隱私、安全或部署
+        - 其他
+    validations:
+      required: true
