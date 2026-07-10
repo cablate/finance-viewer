@@ -27,7 +27,6 @@ export async function POST(request) {
       const status = err.notFound ? 404 : 400;
       return NextResponse.json({ error: err.message }, { status });
     }
-    console.error(err);
     return NextResponse.json(
       { error: safeErrorMessage(err) },
       { status: 500 },

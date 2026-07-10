@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DEMO_DB = 'data/dev-demo.sqlite';
 const BUILD_DB = 'data/dev-verify-build.sqlite';
+const RUNTIME_DB = 'data/dev-verify-runtime.sqlite';
+const VERIFY_DIST_DIR = '.next-verify';
 const SCREENSHOTS = [
   'docs/screenshots/overview-demo.png',
   'docs/screenshots/trend-demo.png',
@@ -198,7 +200,21 @@ function main() {
   console.log(`cwd=${ROOT}`);
   console.log(`demoDb=${DEMO_DB}`);
   console.log(`buildDb=${BUILD_DB}`);
+  console.log(`runtimeDb=${RUNTIME_DB}`);
+  console.log(`verifyDistDir=${VERIFY_DIST_DIR}`);
   console.log('realDb=data/finance.sqlite (not opened by this script)');
+
+  run(process.execPath, ['node_modules/eslint/bin/eslint.js', '.', '--max-warnings=0'], {
+    label: 'eslint . --max-warnings=0',
+  });
+  pass('eslint', '0 warnings');
+
+  const npmExecPath = process.env.npm_execpath;
+  if (!npmExecPath) fail('production-audit', 'npm_execpath missing; run through npm run verify:release');
+  run(process.execPath, [npmExecPath, 'audit', '--omit=dev', '--audit-level=moderate'], {
+    label: 'npm audit --omit=dev --audit-level=moderate',
+  });
+  pass('production-audit', '0 vulnerabilities at moderate or above');
 
   run(process.execPath, ['--test'], {
     label: 'node --test',
@@ -207,10 +223,19 @@ function main() {
   pass('node-test', 'passed');
 
   run(process.execPath, ['node_modules/next/dist/bin/next', 'build'], {
-    label: `FINANCE_DB_PATH=${BUILD_DB} next build`,
-    env: { FINANCE_DB_PATH: BUILD_DB },
+    label: `FINANCE_DB_PATH=${BUILD_DB} NEXT_DIST_DIR=${VERIFY_DIST_DIR} next build`,
+    env: { FINANCE_DB_PATH: BUILD_DB, NEXT_DIST_DIR: VERIFY_DIST_DIR },
   });
   pass('next-build', 'passed');
+
+  run(process.execPath, ['scripts/smoke-runtime.mjs'], {
+    label: `FINANCE_DB_PATH=${RUNTIME_DB} node scripts/smoke-runtime.mjs`,
+    env: {
+      FINANCE_DB_PATH: RUNTIME_DB,
+      NEXT_DIST_DIR: VERIFY_DIST_DIR,
+    },
+  });
+  pass('runtime-smoke', 'health + transactions page + production CSP passed');
 
   checkPersonalizedResidue();
   checkDemoMetrics();

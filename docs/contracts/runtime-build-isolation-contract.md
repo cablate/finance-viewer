@@ -16,7 +16,7 @@ change_context:
 
 ## Behavior Boundary
 
-Development 使用 `.next-dev`；production build 與 start 使用 `.next`。兩種程序並存時不得互相刪除或改寫 chunks。
+Development 使用 `.next-dev`；production build 與 start 使用 `.next`；release verification 使用 `.next-verify`。三種程序並存時不得互相刪除或改寫 chunks。
 
 ## Consumers And Entrypoints
 
@@ -37,7 +37,8 @@ Development 使用 `.next-dev`；production build 與 start 使用 `.next`。兩
 
 - Dev chunks 寫入 `.next-dev/`。
 - Production chunks 寫入 `.next/`。
-- 兩個目錄都不進 git。
+- Release verification chunks 寫入 `.next-verify/`。
+- 三個目錄都不進 git。
 
 ## UI States
 
@@ -47,6 +48,7 @@ Development 使用 `.next-dev`；production build 與 start 使用 `.next`。兩
 ## Invariants
 
 - Dev 與 production 不共用輸出目錄。
+- Release verification 不改寫正在運行的 dev 或 production artifacts。
 - Build/test 仍使用隔離 `FINANCE_DB_PATH`。
 - `data/finance.sqlite` 不因 build isolation 被刪除、重建或移動。
 
@@ -54,12 +56,13 @@ Development 使用 `.next-dev`；production build 與 start 使用 `.next`。兩
 
 1. Given a dev server is running, when production build completes and production starts, then `/transactions` loads without MODULE_NOT_FOUND.
 2. Given production is running, when dev recompiles, then production `.next/server/chunks` remains usable.
+3. Given production is running, when `npm run verify:release` build 與 smoke test 完成, then production `.next/server/chunks` 未被改寫。
 
 ## Test Mapping
 
-- Build: `FINANCE_DB_PATH=data/dev-verify-build.sqlite npm run build`
+- Build: `FINANCE_DB_PATH=data/dev-verify-build.sqlite NEXT_DIST_DIR=.next-verify npm run build`
 - Runtime: start production on 3127 and load `/transactions?month=2026-06&view=needs-review`
-- Filesystem: verify `.next/BUILD_ID` and `.next-dev/` are separate and ignored
+- Filesystem: verify `.next/`, `.next-dev/`, and `.next-verify/` are separate and ignored
 
 ## Evidence
 

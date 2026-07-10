@@ -42,7 +42,10 @@ export async function POST(request) {
   } catch (err) {
     const msg = String((err && err.message) || err);
     // validateRule 的輸入校驗錯誤（條件/結果不足、match_key 正規化後為空）屬使用者輸入問題 → 400
-    const status = (msg.includes('至少需') || msg.includes('match_key 正規化後為空')) ? 400 : 500;
-    return NextResponse.json({ error: msg }, { status });
+    const validationError = msg.includes('至少需') || msg.includes('match_key 正規化後為空');
+    return NextResponse.json(
+      { error: validationError ? msg : safeErrorMessage(err) },
+      { status: validationError ? 400 : 500 },
+    );
   }
 }

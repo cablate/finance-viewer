@@ -121,12 +121,14 @@ Last Say is currently a single-user localhost application with no authentication
 
 ```bash
 npm run dev
+npm run lint
 npm test
 npm run build
+npm run audit:prod
 npm run verify:release
 ```
 
-The release verifier runs tests and builds against isolated databases, scans tracked files for personal finance residue, checks demo metrics, and validates committed screenshots.
+The release verifier runs lint, dependency audit, tests, an isolated `.next-verify` build, and a real runtime smoke test without rewriting the live `.next` directory. It also scans tracked files for personal finance residue, checks demo metrics, and validates committed screenshots.
 
 ## Roadmap
 

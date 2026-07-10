@@ -47,8 +47,11 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ ok: true, ...mutation });
   } catch (err) {
     const msg = String((err && err.message) || err);
-    const status = msg.includes('至少需') ? 400 : 500;
-    return NextResponse.json({ error: msg }, { status });
+    const validationError = msg.includes('至少需') || msg.includes('match_key 正規化後為空');
+    return NextResponse.json(
+      { error: validationError ? msg : safeErrorMessage(err) },
+      { status: validationError ? 400 : 500 },
+    );
   }
 }
 

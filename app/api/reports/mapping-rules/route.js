@@ -26,7 +26,6 @@ export async function POST(request) {
     if (err instanceof MappingValidationError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error(err);
     return NextResponse.json(
       { error: safeErrorMessage(err) },
       { status: 500 },

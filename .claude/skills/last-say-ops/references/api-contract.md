@@ -4,6 +4,7 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start every run with 
 
 ## Read Routes
 
+- `GET /api/health`: `{ok, transactions, corrections, schema_version}`. Stop if it is not HTTP 200 or `ok` is not true; HTTP 503 means the database could not be initialized or read safely.
 - `GET /api/meta`: database path, counts, available months, sources, categories, and global `needsReview`.
 - `GET /api/transactions?month=&view=&search=&sort=&direction=&limit=&offset=`: transaction list. Use `view=needs-review&sort=confidence&direction=asc` for human review.
 - `GET /api/transactions/:id`: one transaction and its source context.

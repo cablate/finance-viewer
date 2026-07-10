@@ -139,12 +139,14 @@ npx next dev -H 127.0.0.1 -p 3128
 
 ```bash
 npm run dev
+npm run lint
 npm test
 npm run build
+npm run audit:prod
 npm run verify:release
 ```
 
-`verify:release` 會使用隔離 DB 執行測試與 build，並檢查公開檔案是否殘留銀行名稱、卡號或個人資料。核心技術為 Next.js 15、React 19、Tailwind CSS 4、shadcn/ui 與 Node 內建 SQLite。
+`verify:release` 會在隔離 DB 與 `.next-verify` 中執行 lint、依賴稽核、測試、build、實際 runtime smoke test，並檢查公開檔案是否殘留銀行名稱、卡號或個人資料；不會改寫正式服務的 `.next`。核心技術為 Next.js 15、React 19、Tailwind CSS 4、shadcn/ui 與 Node 內建 SQLite。
 
 ## Roadmap
 

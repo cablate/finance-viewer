@@ -58,7 +58,7 @@ function ShellContent({ children }) {
     const params = new URLSearchParams(searchParams.toString())
     params.set("month", lm)
     router.replace(`?${params.toString()}`, { scroll: false })
-  }, [monthRoute, month, meta, searchParams, router])
+  }, [monthRoute, month, meta, pathname, searchParams, router])
 
   const lm = latestMonth(meta)
   const isReady = !monthRoute || month !== "" || (meta && !lm)
