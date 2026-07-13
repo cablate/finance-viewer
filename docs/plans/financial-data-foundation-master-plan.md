@@ -2540,6 +2540,56 @@ temp server/DB/dist/screenshots removed; port 3138 listener false
 
 Phase 3 狀態：acceptance passed。Credit cards、statements、payment matches、installments、liabilities、official schedules、payment allocations、commitments、typed routes、compound ingestion、debt readiness、Data Center UI 與 Skill workflow 均完成；Phase 4 只有在本 Phase commit 與 push 成功後解鎖。
 
+### 31.10 Phase 4 Validation Evidence
+
+2026-07-14 於 Windows x64、Node v22.19.0、SQLite 3.50.4，全程使用 explicit temp `FINANCE_DB_PATH`、隔離 Next dist、synthetic investment facts 與 temp port 3138；未讀寫 `data/finance.sqlite`，未碰 3127。
+
+```text
+npm test
+tests 118, pass 118, fail 0, duration_ms 2365.6071
+
+npm run audit:prod
+found 0 vulnerabilities
+
+npm run lint
+Exit code: 0 (eslint . --max-warnings=0)
+
+$env:NEXT_DIST_DIR = '.next-p4-final'; npm run build
+Compiled successfully; 56 static pages generated; /data and all Phase 4 APIs present
+```
+
+Focused automated evidence：
+
+```text
+canonical decimal input rejects JSON Number and exponent notation
+half-even rounding: 2.5 -> 2; 3.5 -> 4
+USD: 10.25 * 101.23 = 103761 minor; USD/TWD 32.5 = 3372232 minor
+JPY exponent 0: 10.25 * 101.23 = 1038 minor
+missing quote => missing_quote; quote older than 7 days => stale
+same instrument/date with two providers => both rows retained; deterministic authority/provider selection
+missing FX => base_value_minor null; holding/instrument currency mismatch => no derived total
+option payload and quote without matching source/currency => rejected fail closed
+investment bundle late-section failure => atomic rollback remains covered by ingestion tests
+```
+
+以 temp production server `http://127.0.0.1:3138` 走實際 API/browser rehearsal：
+
+```text
+GET /api/health => ok true, schema_version 5
+GET /api/finance/inventory?as_of=2026-07-14
+=> valuation_status current; derived_value_minor 103761; base_value_minor 3372232
+=> watermark includes holding_key, quote_key, fx_key
+GET /data => HTTP 200; 投資估值 tab active; holding, quote date, FX date rendered
+desktop 1440x1000 => scrollWidth 1440, clientWidth 1440
+mobile 390x844 => scrollWidth 390, clientWidth 390; tab/holding/value visible
+browser console errors => 0
+temp server/DB/logs/dist removed; port 3138 listener false
+```
+
+規格與現實偏差：初版 decimal helper 與 UI formatter 仍假設所有 currency exponent 為 2，runtime review 時發現這會錯算 JPY 且 UI 的 BigInt-to-Number 可能讓極大金額失真；已在 Phase 4 內補上 currency-aware exponent、minor/decimal conversion 與全程 BigInt 顯示，並新增 JPY focused evidence。計畫只要求 TWD/USD fixture，本次提高到所有目前 supported currencies 可沿用明確 exponent owner；現階段 supported list 中只有 JPY 為 0，其餘為 2。
+
+Phase 4 狀態：acceptance passed。Decimal precision owner、investment persistence、quotes/FX、deterministic valuation/watermark、inventory/readiness、Data Center UI 與 Skill workflow 均完成；Phase 5 只有在本 Phase commit 與 push 成功後解鎖。
+
 - [Node.js SQLite API](https://nodejs.org/api/sqlite.html)：`node:sqlite` 的 BigInt、backup 與版本行為入口；不得只依模型記憶假設 API signature。
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12)：machine-readable AI payload／capability contract。
 - [SIX Financial Data Standards](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：currency／instrument identifier 標準入口；instrument identity 仍需 source 與 review。

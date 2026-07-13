@@ -1,10 +1,11 @@
-# Financial Data Foundation: Phase 1-3 Operator Guide
+# Financial Data Foundation: Phase 1-4 Operator Guide
 
 Read this reference for account inventory, institution aliases, source evidence,
 scope attestations, source expectations, balance snapshots, cash activity,
-credit cards, loans, commitments, and structured ingestion. Investments,
-valuations, and general analysis datasets are not available yet. Do not simulate
-them with generic JSON or direct DB writes.
+credit cards, loans, commitments, simple investments, quotes, FX, deterministic
+valuation, and structured ingestion. General analysis datasets and complex
+investment contexts are not available yet. Do not simulate them with generic
+JSON or direct DB writes.
 
 ## Bootstrap
 
@@ -120,8 +121,10 @@ Use `finance.ingestion-bundle/v1`; retrieve current enums from capabilities.
 Supported sections are `accounts`, `sources`, `balance_snapshots`,
 `cash_transactions`, `credit_card_profiles`, `credit_card_statements`,
 `credit_card_installments`, `credit_card_payment_matches`, `liabilities`,
-`loan_schedules`, `loan_allocations`, `commitments`, and
-`commitment_occurrences`. Each item has a unique `client_item_key`; later sections
+`loan_schedules`, `loan_allocations`, `commitments`, `commitment_occurrences`,
+`instruments`, `investment_trades`, `holding_snapshots`, `market_quotes`,
+`fx_quotes`, and `investment_cash_matches`. Each item has a unique
+`client_item_key`; later sections
 may use `account_client_ref` or `source_client_ref` to reference items in the
 same bundle. Money is an integer minor-unit JSON string plus currency.
 
@@ -175,6 +178,28 @@ patterns may only produce candidates. Editing a template never changes settled
 occurrences. `liquidity_forecast_90d` exposes prerequisites only in Phase 3; do
 not claim that a forecast exists.
 
+## Investments, Quotes, FX, And Valuation
+
+Start with `GET /api/finance/inventory` and
+`GET /api/finance/readiness?goal=investment_value`. Create an investment account,
+instrument identity, and source evidence before holdings or trades. Use
+`/api/finance/investments/instruments|trades|holdings|quotes`,
+`/api/finance/fx-quotes`, and `/api/finance/investments/cash-matches`, or include
+their typed sections in one preview/commit bundle.
+
+Quantity, price, and FX values are decimal strings, never JSON numbers. A market
+or FX quote requires `source_key`, provider, currency pair, and `as_of_date`.
+`fx_quotes` means one base currency equals `rate_decimal` quote currency. Do not
+reverse or cross rates silently. Multiple providers remain separate source facts;
+the deterministic valuation read model selects by date, authority, then stable
+provider ordering and returns a holding/quote/FX watermark.
+
+Source-reported market value and derived value are separate fields. Missing or
+stale quote, currency mismatch, or missing FX keeps readiness partial/stale and
+must not produce a base-currency total. Options, futures, margin, DeFi, tax lots,
+and complex corporate actions are unsupported; never store them as
+`quoted_asset` or `other_reviewed` to claim support.
+
 For an incorrect committed run:
 
 1. `POST /api/finance/imports/:runKey/reverse-preview`.
@@ -205,8 +230,8 @@ source artifacts. Bundles are sensitive and not encrypted by Last Say.
 - No account/source identity: create or resolve typed identity first.
 - Alias collision: stop at `IDENTITY_CONFLICT`.
 - Complete-scope proposal: hand off to `/confirmations`.
-- Need investment/valuation, cross-context reconciliation, or arbitrary analysis
-  datasets: report that the current capability does not expose it yet.
+- Need complex investment contexts, cross-context reconciliation, or arbitrary
+  analysis datasets: report that the current capability does not expose it yet.
 - Missing official card statement, loan principal snapshot, or loan schedule:
   report the exact readiness gap; never fill it with an AI estimate.
 - Options, futures, margin, DeFi, tax lots, or business consolidation: report

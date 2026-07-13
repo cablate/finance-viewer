@@ -40,6 +40,8 @@ Before operating on statements or rules, read the required references below. `AG
 - Credit-card payments are settlement matches, not a second expense. Installment entries are future obligations, not repeated merchant purchases.
 - Never derive an official loan schedule, revolving-card interest, or future payment amount from APR, principal, or historical averages. Store only sourced facts; leave readiness partial when official evidence is missing.
 - Before changing a commitment template, inspect settled occurrences. Template edits must not rewrite settled history.
+- Investment quantities, prices, and FX rates must be canonical decimal strings. Every quote needs typed source evidence and an as-of date; never reuse a quote as timeless.
+- Never invent FX to complete a base-currency total. Options, futures, margin, DeFi, and tax lots require a separate context and must not be stored as ordinary quoted assets.
 - After commit, re-read inventory/readiness. For a wrong committed run, use reverse-preview and prepare a `reverse_ingestion_run` confirmation; never hard-delete or patch source facts into disappearance.
 - Never use arbitrary SQL, direct SQLite writes, generic field patches, server-side URL fetch, or hard deletion of source facts.
 - A database row count does not prove that all accounts, liabilities, or investments are known. Only report global completeness when the relevant scope attestation and runtime readiness permit it.

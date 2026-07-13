@@ -23,6 +23,7 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `GET /api/finance/balance-snapshots?account=`: active typed balance facts; add `history=1` for reversed/superseded audit drilldown.
 - `GET /api/finance/entities`, `/institutions`, `/accounts`, `/sources`, `/scope-attestations`, `/source-expectations`: typed financial foundation inventory. Resource detail routes use the stable key.
 - `GET /api/finance/credit-cards`, `/liabilities`, `/commitments`: typed obligations, evidence ownership, schedules, payment matches, and occurrences.
+- `GET /api/finance/investments/instruments|holdings`: instrument inventory and deterministic positions with quote/FX watermark.
 - `GET /api/finance/human-confirmations?status=pending`: high-risk proposals. AI may inspect status but may not call the browser confirmation route.
 
 ## Write Routes
@@ -41,6 +42,7 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `POST /api/finance/imports/preview`: validate and stage an atomic `finance.ingestion-bundle/v1`; no canonical writes.
 - `POST /api/finance/imports/:runKey/commit`: atomically write all supported sections and purge staged payload.
 - Obligations writes: `POST /api/finance/credit-cards`, `/credit-cards/statements`, `/credit-cards/installments`, `/credit-cards/payment-matches`, `/liabilities`, `/liabilities/:key/schedule`, `/liabilities/allocations`, `/commitments`, and `/commitments/:key/occurrences`. Profile/template updates use stable-key `PATCH` plus `expected_version`.
+- Investment writes: `POST /api/finance/investments/instruments|trades|holdings|quotes`, `/api/finance/fx-quotes`, and `/api/finance/investments/cash-matches`. Decimal facts are strings; quote source/as-of are mandatory.
 - `POST /api/finance/imports/:runKey/reverse-preview`: read-only impact and blocker check. A reversible result supplies the exact `impact_hash` for a human-confirmed reversal proposal.
 - `POST /api/finance/human-confirmations`: prepare a registry-approved high-risk proposal. For `declare_scope_complete`, submit `{action_kind:"declare_scope_complete",resource_type:"scope_attestation",payload:<exact scope payload>}` and tell the user to review `/confirmations`. Do not call `/browser-session` or `/:key/confirm` as AI.
 
@@ -55,6 +57,7 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `classification_rules` learn merchant categories; reporting mappings learn accounting lines. Do not mix them.
 - Deterministic exclusions such as credit-card payments, internal transfers, loan principal, and investment purchases cannot be turned into P&L expenses by an ordinary mapping rule.
 - Credit-card payment matches settle statements; installment entries do not create new expenses. Loan schedules require official or user-confirmed evidence, and AI must never infer them from APR.
+- Derived investment totals require a complete holding/quote/FX watermark. Missing FX never yields a base-currency total; complex derivatives cannot be disguised as ordinary instruments.
 - Balance sheet and cash flow remain incomplete until account metadata, snapshots, and transfer matching exist. Never invent those numbers.
 - Learning context is evidence retrieval, not automatic classification. Never copy `similarity` into ledger confidence. `consensus.conflict=true` caps confidence below `0.6` and forbids rule creation until new evidence resolves it.
 - Finance API errors use `{error:{code,message,field?,allowed_values?,retryable}}`; handle `IDENTITY_CONFLICT`, `VERSION_CONFLICT`, `HUMAN_CONFIRMATION_REQUIRED`, and `UNSUPPORTED_CONTEXT` explicitly.
