@@ -24,6 +24,8 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `GET /api/finance/entities`, `/institutions`, `/accounts`, `/sources`, `/scope-attestations`, `/source-expectations`: typed financial foundation inventory. Resource detail routes use the stable key.
 - `GET /api/finance/credit-cards`, `/liabilities`, `/commitments`: typed obligations, evidence ownership, schedules, payment matches, and occurrences.
 - `GET /api/finance/investments/instruments|holdings`: instrument inventory and deterministic positions with quote/FX watermark.
+- `GET /api/finance/valued-items`, `/reconciliation/summary`, `/review-tasks`, `/source-conflicts`: Tier 2 values and the cross-context review/reconciliation queue.
+- `GET /api/finance/identity-redirects?type=&key=`: resolve a merged institution, account, or instrument key.
 - `GET /api/finance/human-confirmations?status=pending`: high-risk proposals. AI may inspect status but may not call the browser confirmation route.
 
 ## Write Routes
@@ -43,6 +45,8 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `POST /api/finance/imports/:runKey/commit`: atomically write all supported sections and purge staged payload.
 - Obligations writes: `POST /api/finance/credit-cards`, `/credit-cards/statements`, `/credit-cards/installments`, `/credit-cards/payment-matches`, `/liabilities`, `/liabilities/:key/schedule`, `/liabilities/allocations`, `/commitments`, and `/commitments/:key/occurrences`. Profile/template updates use stable-key `PATCH` plus `expected_version`.
 - Investment writes: `POST /api/finance/investments/instruments|trades|holdings|quotes`, `/api/finance/fx-quotes`, and `/api/finance/investments/cash-matches`. Decimal facts are strings; quote source/as-of are mandatory.
+- Phase 5 writes: `POST /api/finance/valued-items`, `/valued-items/:key/valuations`, `/reconciliation/transfers`, `/source-conflicts`, and `/source-conflicts/:key/resolve`; review tasks close through `PATCH /api/finance/review-tasks/:key`.
+- Merge preview is `POST /api/finance/identity-merges/preview`. A merge proposal uses the exact preview as payload, `resource_type=identity_merge`, the matching `merge_institution|merge_account|merge_instrument` action, and source version; only `/confirmations` may execute it.
 - `POST /api/finance/imports/:runKey/reverse-preview`: read-only impact and blocker check. A reversible result supplies the exact `impact_hash` for a human-confirmed reversal proposal.
 - `POST /api/finance/human-confirmations`: prepare a registry-approved high-risk proposal. For `declare_scope_complete`, submit `{action_kind:"declare_scope_complete",resource_type:"scope_attestation",payload:<exact scope payload>}` and tell the user to review `/confirmations`. Do not call `/browser-session` or `/:key/confirm` as AI.
 

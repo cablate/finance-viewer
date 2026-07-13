@@ -6,6 +6,7 @@ import { withTransaction } from '@/lib/queries/finance/common';
 import { readFinanceJson, actorFromRequest, financeErrorResponse } from '@/lib/finance/http';
 import { FinanceError } from '@/lib/finance/contracts';
 import { reverseIngestion } from '@/lib/finance/ingestion/reversal';
+import { mergeIdentity } from '@/lib/queries/finance/identity-merges';
 
 export async function POST(request, { params }) {
   try {
@@ -35,8 +36,9 @@ export async function POST(request, { params }) {
       const proposal = getHumanConfirmation(key, db)
       const canDeclareScope = proposal.action_kind === 'declare_scope_complete' && proposal.resource_type === 'scope_attestation'
       const canReverseRun = proposal.action_kind === 'reverse_ingestion_run' && proposal.resource_type === 'ingestion_run'
-      if (!canDeclareScope && !canReverseRun) {
-        throw new FinanceError('REVIEW_REQUIRED', 'This action has no Phase 1 browser executor', { status: 409 })
+      const canMerge = ['merge_institution','merge_account','merge_instrument'].includes(proposal.action_kind) && proposal.resource_type === 'identity_merge'
+      if (!canDeclareScope && !canReverseRun && !canMerge) {
+        throw new FinanceError('REVIEW_REQUIRED', 'This action has no browser executor', { status: 409 })
       }
       const confirmed = confirmHumanConfirmation(key, { browserConfirmed: true }, db)
       return consumeHumanConfirmation({
@@ -49,7 +51,9 @@ export async function POST(request, { params }) {
         confirmation_receipt: confirmed.confirmation_receipt,
       }, (authorization) => canDeclareScope
         ? createScopeAttestation(proposal.payload, actorFromRequest(request), db, authorization)
-        : reverseIngestion(proposal.resource_key, proposal.payload, actorFromRequest(request), db, authorization), db)
+        : canReverseRun
+          ? reverseIngestion(proposal.resource_key, proposal.payload, actorFromRequest(request), db, authorization)
+          : mergeIdentity(proposal.payload, actorFromRequest(request), db, authorization), db)
     })
     return NextResponse.json({ ok: true, result })
   } catch (error) {

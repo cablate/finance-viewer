@@ -42,6 +42,9 @@ Before operating on statements or rules, read the required references below. `AG
 - Before changing a commitment template, inspect settled occurrences. Template edits must not rewrite settled history.
 - Investment quantities, prices, and FX rates must be canonical decimal strings. Every quote needs typed source evidence and an as-of date; never reuse a quote as timeless.
 - Never invent FX to complete a base-currency total. Options, futures, margin, DeFi, and tax lots require a separate context and must not be stored as ordinary quoted assets.
+- Manual property or private-asset values are Tier 2 snapshots: require method, date, currency, and source evidence, and never turn them into cash-flow or P&L facts.
+- Reconcile transfers and settlements through their typed match routes. A one-sided or low-confidence match stays queued; never force it confirmed to make totals agree.
+- Identity merges require a fresh typed impact preview and browser confirmation. Never reuse an old impact hash, merge a collided identity, or bypass the redirect/audit path.
 - After commit, re-read inventory/readiness. For a wrong committed run, use reverse-preview and prepare a `reverse_ingestion_run` confirmation; never hard-delete or patch source facts into disappearance.
 - Never use arbitrary SQL, direct SQLite writes, generic field patches, server-side URL fetch, or hard deletion of source facts.
 - A database row count does not prove that all accounts, liabilities, or investments are known. Only report global completeness when the relevant scope attestation and runtime readiness permit it.

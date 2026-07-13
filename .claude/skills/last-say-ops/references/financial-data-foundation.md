@@ -1,10 +1,12 @@
-# Financial Data Foundation: Phase 1-4 Operator Guide
+# Financial Data Foundation: Phase 1-5 Operator Guide
 
 Read this reference for account inventory, institution aliases, source evidence,
 scope attestations, source expectations, balance snapshots, cash activity,
 credit cards, loans, commitments, simple investments, quotes, FX, deterministic
 valuation, and structured ingestion. General analysis datasets and complex
-investment contexts are not available yet. Do not simulate them with generic
+investment contexts are not available yet. Phase 5 also exposes manual valued
+items, typed reconciliation, review tasks, source conflicts, and human-confirmed
+identity merge. Do not simulate them with generic
 JSON or direct DB writes.
 
 ## Bootstrap
@@ -200,6 +202,40 @@ must not produce a base-currency total. Options, futures, margin, DeFi, tax lots
 and complex corporate actions are unsupported; never store them as
 `quoted_asset` or `other_reviewed` to claim support.
 
+## Manual Valuation And Reconciliation
+
+Use `POST /api/finance/valued-items` for real estate, vehicles, collectibles,
+private receivables, or private businesses, then add dated evidence through
+`POST /api/finance/valued-items/:key/valuations`. Every snapshot requires a
+source, currency, valuation method, authority, and as-of date. These are Tier 2
+net-worth facts only; never create transactions, revenue, expenses, or cash flow
+from a valuation change.
+
+Read `GET /api/finance/reconciliation/summary` before claiming transfers or
+settlements are reconciled. Internal transfers use
+`POST /api/finance/reconciliation/transfers`; card, loan, and investment cash
+legs keep their existing typed match owners. Missing counterpart transactions
+remain one-sided and `unreconciled`. AI-researched matches below 0.8 cannot be
+confirmed; leave them proposed for review.
+
+`GET /api/finance/review-tasks?status=open` is the unified work queue. Source
+conflicts are created and resolved through `/api/finance/source-conflicts`; a
+resolution must select one candidate source and include a human-readable note.
+Resolving the conflict closes the linked task with the selected source evidence.
+Do not close a task merely to improve readiness.
+
+For duplicate institution, account, or instrument identity:
+
+1. `POST /api/finance/identity-merges/preview` with resource type, old key, and
+   retained key.
+2. Stop when `can_merge=false`; report every collision and do not edit facts.
+3. Submit the exact preview as a human-confirmation payload with the matching
+   `merge_*` action, `resource_type=identity_merge`, old key, and source version.
+4. Tell the user to inspect `/confirmations`; never confirm it yourself.
+5. After browser execution, resolve the old key through `identity-redirects`,
+   then re-read inventory/readiness. The executor explicitly rebinds every
+   registered FK, archives the old identity, and preserves audit evidence.
+
 For an incorrect committed run:
 
 1. `POST /api/finance/imports/:runKey/reverse-preview`.
@@ -230,7 +266,7 @@ source artifacts. Bundles are sensitive and not encrypted by Last Say.
 - No account/source identity: create or resolve typed identity first.
 - Alias collision: stop at `IDENTITY_CONFLICT`.
 - Complete-scope proposal: hand off to `/confirmations`.
-- Need complex investment contexts, cross-context reconciliation, or arbitrary
+- Need complex investment contexts or arbitrary
   analysis datasets: report that the current capability does not expose it yet.
 - Missing official card statement, loan principal snapshot, or loan schedule:
   report the exact readiness gap; never fill it with an AI estimate.

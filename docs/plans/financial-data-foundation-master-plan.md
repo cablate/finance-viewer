@@ -2590,6 +2590,60 @@ temp server/DB/logs/dist removed; port 3138 listener false
 
 Phase 4 狀態：acceptance passed。Decimal precision owner、investment persistence、quotes/FX、deterministic valuation/watermark、inventory/readiness、Data Center UI 與 Skill workflow 均完成；Phase 5 只有在本 Phase commit 與 push 成功後解鎖。
 
+### 31.11 Phase 5 Validation Evidence
+
+2026-07-14 於 Windows x64、Node v22.19.0、SQLite 3.50.4，全程使用 explicit temp `FINANCE_DB_PATH`、隔離 Next dist、synthetic valued-item/reconciliation facts 與 temp port 3138；未讀寫 `data/finance.sqlite`，未碰 3127。
+
+```text
+npm test
+tests 127, pass 127, fail 0, duration_ms 2406.8289
+
+npm run audit:prod
+found 0 vulnerabilities
+
+npm run lint
+Exit code: 0 (eslint . --max-warnings=0)
+
+$env:NEXT_DIST_DIR = '.next-p5'; npm run build
+Compiled successfully; 63 static pages generated; /data and all Phase 5 APIs present
+```
+
+Focused automated evidence：
+
+```text
+manual real-estate value 1800000000 TWD => Tier 2 inventory; transactions remain 0
+needs-review valuation => one open valuation task linked to valuation_key
+confirmed bank transfer => two typed legs; no duplicate context; reconciliation complete
+one-sided/low-confidence transfer => confirmed rejected; proposed task; status unreconciled
+source conflict resolution => selected source + note retained; linked task resolved atomically
+account merge preview => every registered FK count listed; balance FK rebind verified
+human-confirmed merge => old account archived; redirect retained; source facts preserved
+redirect chain => old key resolves through two merges to the active terminal key
+incompatible account kind => can_merge false; no mutation
+schema FK scan => institution/account/instrument registry covers every downstream FK owner
+legacy CSV import, human classifications, correction/rule logs, reporting, reversal remain green
+```
+
+以 temp production server `http://127.0.0.1:3138` 走實際 API/browser rehearsal：
+
+```text
+GET /api/health => ok true, schema_version 6
+synthetic Tier 2 valuation => 1800000000 TWD; net-worth inventory rendered
+open review tasks => 2 (valuation + source conflict); reconciliation conflicted
+UI source decision => selected official candidate with note; conflict task closed
+postflight inventory => remaining tasks 1; reconciliation complete
+UI account merge preview => 0 FK rows, 0 collisions, deterministic impact hash
+UI merge proposal => pending merge_account visible on /confirmations; AI did not confirm it
+desktop 1440x1000 => item, task, source resolution, preview and proposal states exercised
+mobile 390x844 => scrollWidth 390, clientWidth 390; tab/item/merge controls visible
+browser console errors => 0
+temp server/DB/logs/dist removed; port 3138 listener false
+```
+
+規格與現實偏差：計畫寫「cross-context match contract 完整化」，現有 card settlement、loan allocation 與 investment cash leg 已各有 typed owner，因此沒有建立 generic relationship table；Phase 5 只新增 typed internal-transfer match，統一 read model 以 transaction key 投影四種既有 owner，偵測一筆 transaction 同時落入多 context 的衝突。Net-worth 在本 Phase 只提供 Tier 1/Tier 2 inventory 與 prerequisites，沒有提前實作 Phase 6 的完整 requirement graph 或 analysis dataset。
+
+Phase 5 狀態：acceptance passed。Manual valued items、valuation snapshots、typed reconciliation、review/source-conflict lifecycle、registry-guarded human identity merge、redirect/audit、net-worth inventory、Data Center UI 與 Skill workflow 均完成；Phase 6 只有在本 Phase commit 與 push 成功後解鎖。
+
 - [Node.js SQLite API](https://nodejs.org/api/sqlite.html)：`node:sqlite` 的 BigInt、backup 與版本行為入口；不得只依模型記憶假設 API signature。
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12)：machine-readable AI payload／capability contract。
 - [SIX Financial Data Standards](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：currency／instrument identifier 標準入口；instrument identity 仍需 source 與 review。
