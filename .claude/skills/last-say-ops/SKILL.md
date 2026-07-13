@@ -34,6 +34,10 @@ Before operating on statements or rules, read the required references below. `AG
 - After a rule mutation, verify the returned `impact` and re-read the rule plus needs-review queue. A 2xx response alone is not completion.
 - Do not store merchant dictionaries in this skill. Merchant facts belong in Last Say rules and notes.
 - Use aggregate DB/API checks for acceptance whenever possible.
+- For account, source, scope, or other financial-data work, start with `GET /api/finance/capabilities`; never guess an enum or field.
+- Never use arbitrary SQL, direct SQLite writes, generic field patches, server-side URL fetch, or hard deletion of source facts.
+- A database row count does not prove that all accounts, liabilities, or investments are known. Only report global completeness when the relevant scope attestation and runtime readiness permit it.
+- `actor_type=human` is not human confirmation. Prepare high-risk proposals, then stop for the user's `/confirmations` action; never forge, request, print, or replay a confirmation receipt.
 
 ## Reference Routing
 
@@ -47,6 +51,7 @@ Read only the files needed for the current task:
 - `references/category-guide.md`: complete category boundaries and confidence policy.
 - `references/monthly-workflow.md`: executable Flow A and Flow B checklists, ledger schema, and acceptance output.
 - `references/operator-contract.md`: role, privacy, source handling, and completion contract.
+- `references/financial-data-foundation.md`: Phase 1 financial inventory APIs, typed payloads, scope rules, high-risk confirmation, backup boundary, and current limitations.
 
 ## Self-Update Protocol
 

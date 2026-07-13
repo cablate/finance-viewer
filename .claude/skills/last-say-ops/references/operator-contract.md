@@ -27,9 +27,14 @@ Every uncovered merchant must also carry its learning evidence path: matching ru
 - Do not store private merchant dictionaries in this skill; merchant facts belong in DB rule notes and correction evidence.
 - Do not treat unreviewed AI guesses or merchant-name similarity as ground truth.
 - Do not directly update historical transaction categories after a rule change. Verify the API `impact` and pending queue instead.
+- Do not query SQLite directly or invent generic record payloads. Use capabilities and typed finance routes.
+- Do not claim "all" or "total" from discovered rows. Global completeness requires user-confirmed scope evidence; a scoped answer must be labeled as scoped.
+- Do not call backup/restore commands or active database replacement through AI tool calls. These are explicit local operator actions.
 
 ## Human Boundary
 
 The AI prepares and proposes. The human reviews low-confidence transactions, corrections, accounting mappings, account metadata, balance snapshots, transfers, and reconciliation blockers. Human corrections remain authoritative on re-import and become evidence for later rule improvement.
 
 After rule maintenance, the AI must report how many rows were reclassified, returned to pending review, or preserved as reviewed human decisions. It must not continue to a later import while a disabled rule still owns historical rows.
+
+High-risk operations use a short-lived, one-time browser confirmation bound to the exact payload and resource version. The AI may create the proposal and explain its effect, but the user confirms it in `/confirmations`. Request labels such as `actor_type=human` do not cross this boundary.

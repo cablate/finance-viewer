@@ -1,6 +1,6 @@
 # API Contract
 
-Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start every run with `GET /api/health`, `GET /api/meta`, `GET /api/rules`, and `GET /api/learning/context`.
+Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule runs with `GET /api/health`, `GET /api/meta`, `GET /api/rules`, and `GET /api/learning/context`. Start financial inventory/source work with `GET /api/health` and `GET /api/finance/capabilities`.
 
 ## Read Routes
 
@@ -16,6 +16,9 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start every run with 
 - `GET /api/rules/:id`: one rule plus `linked_rows`, `unreviewed_rows`, and `reviewed_rows`; required before a semantic rule mutation.
 - `GET /api/rules/normalize?text=`: canonical `match_key`; never normalize independently.
 - `GET /api/reports/income-statement?month=`: management P&L, coverage, blockers, and drilldown IDs.
+- `GET /api/finance/capabilities`: authoritative Phase 1 API/schema versions, enums, limits, readiness goals, and unsupported contexts.
+- `GET /api/finance/entities`, `/institutions`, `/accounts`, `/sources`, `/scope-attestations`, `/source-expectations`: typed financial foundation inventory. Resource detail routes use the stable key.
+- `GET /api/finance/human-confirmations?status=pending`: high-risk proposals. AI may inspect status but may not call the browser confirmation route.
 
 ## Write Routes
 
@@ -29,6 +32,8 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start every run with 
 - `POST /api/transactions/review` with `{ids:[...]}` to confirm classifications without changing facts.
 - `POST /api/reports/mappings`: explicit per-transaction report mapping.
 - `POST /api/reports/mapping-rules`: reusable accounting mapping rule; keep separate from merchant classification rules.
+- Typed Phase 1 CRUD: `POST /api/finance/entities|institutions|accounts|sources|scope-attestations|source-expectations`; `PATCH` resource detail routes with `expected_version`; add aliases through `/institutions/:key/aliases` or `/accounts/:key/aliases`.
+- `POST /api/finance/human-confirmations`: prepare a registry-approved high-risk proposal. For `declare_scope_complete`, submit `{action_kind:"declare_scope_complete",resource_type:"scope_attestation",payload:<exact scope payload>}` and tell the user to review `/confirmations`. Do not call `/browser-session` or `/:key/confirm` as AI.
 
 ## Invariants
 
@@ -42,3 +47,5 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start every run with 
 - Deterministic exclusions such as credit-card payments, internal transfers, loan principal, and investment purchases cannot be turned into P&L expenses by an ordinary mapping rule.
 - Balance sheet and cash flow remain incomplete until account metadata, snapshots, and transfer matching exist. Never invent those numbers.
 - Learning context is evidence retrieval, not automatic classification. Never copy `similarity` into ledger confidence. `consensus.conflict=true` caps confidence below `0.6` and forbids rule creation until new evidence resolves it.
+- Finance API errors use `{error:{code,message,field?,allowed_values?,retryable}}`; handle `IDENTITY_CONFLICT`, `VERSION_CONFLICT`, `HUMAN_CONFIRMATION_REQUIRED`, and `UNSUPPORTED_CONTEXT` explicitly.
+- New financial money facts use integer minor units and currency; quantity/price/FX use canonical decimal strings. Legacy transaction endpoints retain their established compatibility representation.

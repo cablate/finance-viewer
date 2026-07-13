@@ -1,9 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createRequire } from 'node:module';
-
-const require = createRequire(import.meta.url);
+import { DatabaseSync } from 'node:sqlite';
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 
 function parseOutput(argv) {
@@ -23,11 +21,78 @@ function parseOutput(argv) {
 const output = parseOutput(process.argv.slice(2));
 fs.mkdirSync(path.dirname(output), { recursive: true });
 process.env.FINANCE_DB_PATH = output;
-
-const { getDb, closeDb, getSchemaVersion } = require('../../../lib/db');
-const db = getDb();
+const db = new DatabaseSync(output);
 
 try {
+  db.exec(`
+    PRAGMA foreign_keys = ON;
+    PRAGMA journal_mode = WAL;
+    CREATE TABLE accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      institution TEXT NOT NULL DEFAULT 'Imported Source',
+      account_type TEXT NOT NULL,
+      masked_number TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE sources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_type TEXT NOT NULL,
+      source_file TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL,
+      statement_month TEXT,
+      row_count INTEGER,
+      imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_type, source_file, description)
+    );
+    CREATE TABLE classification_rules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_key TEXT, source_type TEXT, direction TEXT, category_value TEXT,
+      confidence REAL NOT NULL DEFAULT 0, sample_count INTEGER NOT NULL DEFAULT 0,
+      applied_count INTEGER NOT NULL DEFAULT 0, overridden_count INTEGER NOT NULL DEFAULT 0,
+      origin TEXT NOT NULL DEFAULT 'ai_analysis', enabled INTEGER NOT NULL DEFAULT 1,
+      note TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dedupe_key TEXT NOT NULL UNIQUE, import_match_key TEXT NOT NULL,
+      transaction_date TEXT NOT NULL, transaction_month TEXT NOT NULL, statement_month TEXT,
+      source_type TEXT NOT NULL, flow_type TEXT NOT NULL, name TEXT NOT NULL,
+      amount REAL NOT NULL, inflow REAL NOT NULL DEFAULT 0, outflow REAL NOT NULL DEFAULT 0,
+      category_primary TEXT NOT NULL, category_sub TEXT, ai_confidence REAL,
+      judgment_reason TEXT, memo TEXT, raw_info TEXT, balance REAL, account_original_order TEXT,
+      account_id INTEGER NOT NULL REFERENCES accounts(id), first_source_id INTEGER REFERENCES sources(id),
+      classification_source TEXT NOT NULL DEFAULT 'ai',
+      rule_id INTEGER REFERENCES classification_rules(id) ON DELETE SET NULL,
+      reviewed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE correction_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transaction_id INTEGER NOT NULL REFERENCES transactions(id) ON DELETE RESTRICT,
+      field_name TEXT NOT NULL, old_value TEXT, new_value TEXT, match_key TEXT,
+      source_type TEXT, direction TEXT, rule_id INTEGER,
+      corrected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TRIGGER correction_log_no_update BEFORE UPDATE ON correction_log
+    BEGIN SELECT RAISE(ABORT, 'correction_log is append-only'); END;
+    CREATE TRIGGER correction_log_no_delete BEFORE DELETE ON correction_log
+    BEGIN SELECT RAISE(ABORT, 'correction_log is append-only'); END;
+    CREATE TABLE rule_change_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, rule_id INTEGER, action TEXT NOT NULL,
+      before_rule_json TEXT, after_rule_json TEXT,
+      impacted_count INTEGER NOT NULL DEFAULT 0, reclassified_count INTEGER NOT NULL DEFAULT 0,
+      pending_count INTEGER NOT NULL DEFAULT 0, preserved_reviewed_count INTEGER NOT NULL DEFAULT 0,
+      changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TRIGGER rule_change_log_no_update BEFORE UPDATE ON rule_change_log
+    BEGIN SELECT RAISE(ABORT, 'rule_change_log is append-only'); END;
+    CREATE TRIGGER rule_change_log_no_delete BEFORE DELETE ON rule_change_log
+    BEGIN SELECT RAISE(ABORT, 'rule_change_log is append-only'); END;
+    PRAGMA user_version = 1;
+  `);
   const accountId = db.prepare(`
     INSERT INTO accounts (name, institution, account_type, masked_number)
     VALUES (?, ?, ?, ?)
@@ -82,7 +147,7 @@ try {
   const summary = {
     fixture: 'legacy-v0.2.3',
     app_version: '0.2.3',
-    schema_version: getSchemaVersion(db),
+    schema_version: Number(db.prepare('PRAGMA user_version').get().user_version),
     tables: Object.fromEntries(['accounts', 'sources', 'transactions', 'classification_rules', 'correction_log', 'rule_change_log'].map((table) => [
       table,
       Number(db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count),
@@ -92,5 +157,5 @@ try {
   };
   console.log(JSON.stringify(summary));
 } finally {
-  closeDb();
+  db.close();
 }

@@ -23,6 +23,7 @@ const SECTION_TITLES = {
   "/trend": "歷月走勢",
   "/corrections": "修正紀錄",
   "/rules": "分類規則",
+  "/confirmations": "資料確認",
 }
 
 // 從 useMeta 取最新月份（months.transaction 已由小到大排序）。

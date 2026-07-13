@@ -32,6 +32,7 @@ import {
   ListChecks,
   PieChart,
   ReceiptText,
+  ShieldCheck,
   TrendingUp,
 } from "lucide-react"
 
@@ -42,6 +43,7 @@ const NAV = [
   { href: "/trend", label: "走勢", icon: TrendingUp },
   { href: "/corrections", label: "修正紀錄", icon: History },
   { href: "/rules", label: "分類規則", icon: ListChecks },
+  { href: "/confirmations", label: "資料確認", icon: ShieldCheck },
 ]
 
 export default function AppSidebar({ children }) {

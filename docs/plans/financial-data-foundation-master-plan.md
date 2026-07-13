@@ -2385,6 +2385,58 @@ outputs
 ```
 
 Phase 0 狀態：acceptance passed。Runtime tables/routes/UI 變更為零；Phase 1 只有在本 Phase commit 與 push 成功後解鎖。
+
+### 31.7 Phase 1 Validation Evidence
+
+2026-07-14 於 Windows x64、Node v22.19.0、SQLite 3.50.4，全程以 explicit temp `FINANCE_DB_PATH`、隔離 Next dist 與 synthetic fixture 驗收；未讀寫 `data/finance.sqlite`，亦未碰既有 port 3127。
+
+```text
+npm test
+tests 95, pass 95, fail 0, duration_ms 2102.6164
+
+npm run lint
+Exit code: 0 (eslint . --max-warnings=0)
+
+$env:NEXT_DIST_DIR = '.next-p1-verify'; npm run build
+Compiled successfully; 38 pages/routes generated
+```
+
+以 temp port 3137 執行實際 HTTP rehearsal：
+
+```text
+GET /api/health => health true, schema_version 2
+GET /api/finance/capabilities => api_version finance/v1
+POST account fixture => account_kind bank, review_state needs_review
+Browser high-risk confirmation => HTTP 200, coverage_state declared_complete
+GET /api/finance/confirmations?status=pending => pending count 0
+GET /confirmations => HTTP 200
+```
+
+公開 CLI 的 legacy migration、backup 與 new-path restore rehearsal：
+
+```text
+node scripts/fixtures/financial-data/build-legacy-v0.2.3.mjs --output <temp>/source.sqlite
+schema_version 1; accounts 1; sources 1; transactions 2;
+classification_rules 1; correction_log 1; rule_change_log 1
+
+FINANCE_DB_PATH=<temp>/source.sqlite node -e <initialize through lib/db facade>
+schema_version 2; migrations 2
+
+node scripts/finance-backup.mjs --db <temp>/source.sqlite --output <temp>/backups
+mode db-only; manifest created
+
+node scripts/finance-restore.mjs --input <temp>/backups/<bundle>/manifest.json --target <temp>/restored.sqlite
+integrity ok; foreign_key_violations 0; schema_version 2
+
+restored DB verification
+integrity ok; foreign_key_violations 0; schema_version 2
+
+cleanup_exists=False
+```
+
+Focused negative evidence 由 tests 覆蓋：migration checksum drift／newer schema／rollback、backup hash corruption／newer manifest／existing-target refusal、confirmation actor spoof／payload or version change／expiry／replay／concurrency 均 fail closed。Shared enums、JSON Schemas 與 runtime validators 同源；legacy transaction IDs、dedupe、human corrections、rules 與 append-only logs 在 migration characterization tests 中保持不變。
+
+Phase 1 狀態：acceptance passed。Shared kernel、typed finance API、human-confirmation boundary、backup／restore 與 Skill 同步均完成；Phase 2 只有在本 Phase commit 與 push 成功後解鎖。
 - [Node.js SQLite API](https://nodejs.org/api/sqlite.html)：`node:sqlite` 的 BigInt、backup 與版本行為入口；不得只依模型記憶假設 API signature。
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12)：machine-readable AI payload／capability contract。
 - [SIX Financial Data Standards](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：currency／instrument identifier 標準入口；instrument identity 仍需 source 與 review。
