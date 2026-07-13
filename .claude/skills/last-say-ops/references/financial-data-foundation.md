@@ -1,13 +1,13 @@
-# Financial Data Foundation: Phase 1-5 Operator Guide
+# Financial Data Foundation: Phase 1-6 Operator Guide
 
 Read this reference for account inventory, institution aliases, source evidence,
 scope attestations, source expectations, balance snapshots, cash activity,
 credit cards, loans, commitments, simple investments, quotes, FX, deterministic
-valuation, and structured ingestion. General analysis datasets and complex
-investment contexts are not available yet. Phase 5 also exposes manual valued
-items, typed reconciliation, review tasks, source conflicts, and human-confirmed
-identity merge. Do not simulate them with generic
-JSON or direct DB writes.
+valuation, structured ingestion, readiness policy, and governed analysis
+contexts. Phase 5 also exposes manual valued items, typed reconciliation,
+review tasks, source conflicts, and human-confirmed identity merge. Complex
+investment contexts remain unsupported. Do not simulate any context with
+generic JSON, arbitrary SQL, or direct DB writes.
 
 ## Bootstrap
 
@@ -19,6 +19,34 @@ JSON or direct DB writes.
    `scope-attestations`, and `source-expectations` relevant to the task.
 5. Separate known facts, identity conflicts, missing scope, and unsupported
    contexts before proposing writes.
+
+## Analysis Preflight And Reporting
+
+For every natural-language financial analysis request:
+
+1. Read health and capabilities. Select one advertised readiness goal; do not
+   invent a goal or silently substitute a nearby one.
+2. Read readiness for the exact entity, optional account, and as-of date. Stop
+   or qualify the answer when status is empty, partial, stale, conflicted,
+   unreconciled, or unsupported.
+3. Fetch only the minimum named datasets needed through
+   `POST /api/finance/analysis-context`. The registry currently allows
+   `cash_activity`, `account_balances`, `debt_obligations`,
+   `investment_positions`, `valued_items`, `reconciliation`, and
+   `net_worth_inventory`. Obey advertised filters, page limits, and response
+   limits; never send SQL, table names, or column expressions.
+4. Write the answer in three labeled layers: source-backed facts,
+   deterministic derived values, and AI interpretation. Interpretation never
+   becomes a canonical fact without a typed write and its required review.
+5. Report goal, entity/account scope, as-of date, readiness status, datasets,
+   policy version, source/resource watermarks, material gaps, and exclusions.
+   Ask the human for the highest-priority missing typed evidence first.
+
+An account-scoped complete result means only that account is ready; it never
+proves global completeness. `liquidity_forecast_90d` can have complete
+prerequisites while `forecast_available=false`. `tax_or_derivatives` and
+complex investment analysis return unsupported and require a separate typed
+context.
 
 Every API error is shaped as:
 
@@ -266,8 +294,8 @@ source artifacts. Bundles are sensitive and not encrypted by Last Say.
 - No account/source identity: create or resolve typed identity first.
 - Alias collision: stop at `IDENTITY_CONFLICT`.
 - Complete-scope proposal: hand off to `/confirmations`.
-- Need complex investment contexts or arbitrary
-  analysis datasets: report that the current capability does not expose it yet.
+- Need an unregistered analysis dataset, arbitrary SQL, or complex investment
+  context: report `unsupported` and request or design a separate typed context.
 - Missing official card statement, loan principal snapshot, or loan schedule:
   report the exact readiness gap; never fill it with an AI estimate.
 - Options, futures, margin, DeFi, tax lots, or business consolidation: report

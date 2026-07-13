@@ -24,6 +24,18 @@ test('migration ledger is idempotent and rejects changed checksums', () => {
   } finally {db.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
 
+test('migration runner upgrades unstable v1 checksums once and then preserves drift detection', () => {
+  const dir=tempDir();const db=openDatabase(path.join(dir,'test.sqlite'));
+  try {
+    const migration={version:92,name:'legacy-checksum-fixture',source:'v1',apply(){}};
+    db.exec('BEGIN IMMEDIATE');runMigrations(db,[migration],{appVersion:'test'});
+    db.prepare('UPDATE schema_migrations SET checksum=? WHERE version=92').run('a'.repeat(64));db.exec('COMMIT');
+    db.exec('BEGIN IMMEDIATE');runMigrations(db,[migration],{appVersion:'test'});db.exec('COMMIT');
+    assert.match(db.prepare('SELECT checksum FROM schema_migrations WHERE version=92').get().checksum,/^v2:[a-f0-9]{64}$/);
+    db.exec('BEGIN IMMEDIATE');assert.throws(()=>runMigrations(db,[{...migration,source:'changed'}],{appVersion:'test'}),/checksum mismatch/);db.exec('ROLLBACK');
+  } finally {db.close();fs.rmSync(dir,{recursive:true,force:true});}
+});
+
 test('migration runner refuses ledger versions unknown to this application', () => {
   const dir=tempDir();const db=openDatabase(path.join(dir,'test.sqlite'));
   try {

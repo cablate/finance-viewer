@@ -35,6 +35,10 @@ Before operating on statements or rules, read the required references below. `AG
 - Do not store merchant dictionaries in this skill. Merchant facts belong in Last Say rules and notes.
 - Use aggregate DB/API checks for acceptance whenever possible.
 - For account, source, scope, or other financial-data work, start with `GET /api/finance/capabilities`; never guess an enum or field.
+- Before answering any financial-analysis question, run `health -> capabilities -> readiness` for the requested goal and scope. Do not fetch datasets or interpret values until readiness status, blockers, as-of date, and scope are known.
+- Fetch analysis evidence only through the named datasets advertised by capabilities and `POST /api/finance/analysis-context`. Never request SQL, table names, column expressions, or an unregistered dataset.
+- Keep analysis output in three explicit layers: sourced facts, deterministic derived values, and AI interpretation. Never present an interpretation as a stored or reconciled fact.
+- Every analysis response must state goal, entity/account scope, as-of date, readiness status, datasets used, source/resource watermarks, material gaps, and exclusions. Ask for the highest-priority missing typed evidence before suggesting lower-impact cleanup.
 - Before importing account, balance, or cash activity facts, read `GET /api/finance/inventory` and the relevant readiness goal. Report existing identity, coverage, conflicts, and gaps before proposing writes.
 - Structured financial writes must use preview then commit. Inspect normalized actions and warnings; never skip preview or treat staging rows as canonical facts.
 - Credit-card payments are settlement matches, not a second expense. Installment entries are future obligations, not repeated merchant purchases.
@@ -62,7 +66,7 @@ Read only the files needed for the current task:
 - `references/category-guide.md`: complete category boundaries and confidence policy.
 - `references/monthly-workflow.md`: executable Flow A and Flow B checklists, ledger schema, and acceptance output.
 - `references/operator-contract.md`: role, privacy, source handling, and completion contract.
-- `references/financial-data-foundation.md`: financial inventory/readiness, account/balance/cash ingestion, typed payloads, reversal, scope rules, confirmation, backup boundary, and current limitations.
+- `references/financial-data-foundation.md`: financial inventory/readiness, governed analysis context, account/balance/cash ingestion, typed payloads, reversal, scope rules, confirmation, backup boundary, and current limitations.
 
 ## Self-Update Protocol
 

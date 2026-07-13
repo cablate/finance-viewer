@@ -2644,6 +2644,65 @@ temp server/DB/logs/dist removed; port 3138 listener false
 
 Phase 5 狀態：acceptance passed。Manual valued items、valuation snapshots、typed reconciliation、review/source-conflict lifecycle、registry-guarded human identity merge、redirect/audit、net-worth inventory、Data Center UI 與 Skill workflow 均完成；Phase 6 只有在本 Phase commit 與 push 成功後解鎖。
 
+### 31.12 Phase 6 Validation Evidence
+
+2026-07-14，Windows x64、Node v22.19.0、SQLite 3.50.4。所有測試、build 與 runtime 均明確使用 temp `FINANCE_DB_PATH`；production runtime 只使用 3138，未讀寫 `data/finance.sqlite`，未碰 3127。
+
+```text
+$env:FINANCE_DB_PATH = Join-Path $env:TEMP 'last-say-foundation-p6-evidence.sqlite'; npm test
+# tests 132
+# pass 132
+# fail 0
+# duration_ms 2490.9442
+
+npm run audit:prod
+found 0 vulnerabilities
+
+npm run lint
+> eslint . --max-warnings=0
+Exit code: 0
+
+$env:NEXT_DIST_DIR='.next-p6'; npm run build
+Compiled successfully; /api/finance/analysis-context and all existing routes generated
+Exit code: 0
+```
+
+Focused automated evidence:
+
+```text
+all 8 initial goals => policy_version, scope, requirements, satisfied, prioritized gaps, next actions, source watermark
+global cash readiness without attestation => partial; account-scoped cash readiness => account-only and does not claim global completeness
+cash-flow readiness => boundary/reconciliation gaps remain explicit
+tax_or_derivatives => unsupported + separate_context_required
+liquidity_forecast_90d => prerequisites may be complete while forecast_available=false
+named datasets => strict whitelist, typed filters, pagination/group limits, deterministic response bytes
+unknown dataset => UNKNOWN_SCHEMA; SQL-like/unknown field => VALIDATION_ERROR
+request body over 64 KiB => 413 even without Content-Length
+response payload => no source_file, raw_info, content_sha256, private source descriptions, or filenames
+legacy personal accounts plus typed accounts => both retained in global cash_activity; scoped account query stays isolated
+v1 migration checksum => upgraded once to stable v2 checksum; later source drift still rejected
+```
+
+Temp production runtime `http://127.0.0.1:3138` API rehearsal:
+
+```text
+GET /api/health => ok true, transactions 180, corrections 4, schema_version 6
+GET /api/finance/capabilities => 7 named datasets; arbitrary_sql false
+GET /api/finance/readiness?goal=spending_history&as_of=2026-07-14
+=> status complete, policy finance-readiness/1, scope global
+POST /api/finance/analysis-context => cash_activity + account_balances
+=> months 2026-01 through 2026-06, response_bytes 1420, private field leak false
+POST dataset containing sql => HTTP 400 VALIDATION_ERROR, field body.sql
+temp server/DB/logs/dist removed; port 3138 stopped
+```
+
+Reality deviations discovered and resolved:
+
+1. Existing migration checksums included `Function#toString()`, which changes in a Next production bundle. A CLI-created demo DB therefore failed production startup. The ledger now uses stable `v2:` checksums over version/name/source and transactionally upgrades identifiable 64-hex v1 checksums once; regression tests prove subsequent drift still fails closed.
+2. Demo/legacy accounts predate `entity_id` and `account_key`. The original named cash dataset used typed inner joins, so readiness saw 180 legacy rows while analysis returned none. Global personal analysis now includes those legacy rows with an explicit compatibility boundary; account-scoped analysis still requires a typed account.
+
+Phase 6 acceptance passed: readiness requirement graph, inventory v2, governed analysis datasets, privacy/size/error limits, deterministic provenance, Skill preflight/reporting contract, production DB compatibility, and legacy spending coverage are complete. Phase 7 may begin only after this Phase commit is pushed.
+
 - [Node.js SQLite API](https://nodejs.org/api/sqlite.html)：`node:sqlite` 的 BigInt、backup 與版本行為入口；不得只依模型記憶假設 API signature。
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12)：machine-readable AI payload／capability contract。
 - [SIX Financial Data Standards](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：currency／instrument identifier 標準入口；instrument identity 仍需 source 與 review。

@@ -5,7 +5,7 @@ import { financeErrorResponse } from '@/lib/finance/http';
 export async function GET(request) {
   try {
     const params = request.nextUrl.searchParams;
-    return NextResponse.json({ readiness: readinessForGoal(params.get('goal') || 'cash_position', { entityKey: params.get('entity') || 'personal', asOfDate: params.get('as_of') || undefined }) });
+    return NextResponse.json({ readiness: readinessForGoal(params.get('goal') || 'cash_position', { entityKey: params.get('entity') || 'personal', asOfDate: params.get('as_of') || undefined, accountKey: params.get('account') || undefined }) });
   } catch (error) {
     const result = financeErrorResponse(error);
     return NextResponse.json(result.body, { status: result.status });
