@@ -7,7 +7,7 @@ Last validated against repository: 2026-07-16
 ## 資料庫與表示規則
 
 - **Confirmed：** 單一 SQLite，預設 `data/finance.sqlite`，可由 `FINANCE_DB_PATH` 覆寫。
-- **Confirmed：** repository code與正式DB schema version 10；`schema_migrations` ledger由`lib/db/migration-runner.js`管理checksum與順序。2026-07-16正式postflight確認ledger `1..10`、1,078筆legacy transactions與交易雜湊在v6→v9→v10後保持不變，`integrity_check=ok`且0 FK violations。
+- **Confirmed：** repository code與正式DB schema version 10；`schema_migrations` ledger由`lib/db/migration-runner.js`管理checksum與順序。2026-07-16 migration postflight確認ledger `1..10`、1,078筆legacy transactions與交易雜湊在v6→v9→v10後保持不變。其後current-card／Taishin real-data write先經備份與副本演練，正式DB增至1,108 transactions、28 sources、12 balance snapshots；`integrity_check=ok`且0 FK violations。
 - **Confirmed：** money 的 typed canonical 表示是 integer minor units + ISO-like currency；`lib/finance/money/decimal.js` 定義 TWD／USD 等 exponent 2、JPY exponent 0。
 - **Legacy / compatibility：** legacy transaction 欄位 DDL 宣告為 `REAL`，migration 後實際保存整數 cents。名稱與型別不表達現行語意，修改時不可假設是 major units。
 - **Confirmed：** dates／timestamps 以 ISO-like TEXT 保存；as-of、period 與 source freshness 是財務解釋的一部分。
@@ -204,7 +204,7 @@ Repository 未定義一般資料 retention／purge policy；**Needs owner decisi
 - Data Center money UI已使用canonical exponent與exact decimal conversion；後續新增金額欄位若繞過shared helper，仍可能重新引入倍率錯誤。
 - legacy `REAL` 欄位實際存 cents，容易被新程式誤讀。
 - P&L 與 classification 是不同 mapping owner，不應混用。
-- Balance Sheet／Cash Flow已有formal management read models與UI；但`partial`不等於`complete`，Control Phase 0 pure projector仍不是runtime forecast。
+- Balance Sheet／Cash Flow已有formal management read models與UI；07-16 Balance Sheet已complete，Cash Flow仍partial。任何報表的`partial`都不等於`complete`，Control Phase 0 pure projector仍不是runtime forecast。
 - `source_file`／CSV path 等 local metadata 若直接回傳或記 log，可能暴露本機路徑；目前 `/api/import-ledger` response 含 `csvPath`，只適合 localhost boundary。
 - 沒有 DB 加密；backup bundle也不加密，存取控制由 OS／使用者負責。
 

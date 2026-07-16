@@ -23,6 +23,7 @@ Last validated against repository: 2026-07-16
 | R6 | P1 — next stage | Phase 0只有純reference；缺runtime 90日forecast／safe-to-spend／alerts | High | Medium | High | L | High financial interpretation | R4、obligation timeline、later owner policies | Medium | G4, G5 |
 | R7 | P1 — owner gate | AI-primary、unified review、三張表、正式DB v10與代表性typed flow已完成；scope／proposal／owner acceptance未關閉 | High | High | High | S（owner操作） | High authority | browser-bound confirmation＋owner acceptance | High | G3, G8 |
 | R15 | P1 — foundation maintenance | 2026-01至05官方卡片月檔與既有normalized rows總額不一致；現有source-conflict選擇語意不能修復轉換差異 | Medium | Medium | High | M | High data repair | reversible re-import／transaction repair contract | Medium | G2, G3, G8 |
+| R16 | P1 — before July posted statement | 缺可重複使用的current／unbilled→posted卡片生命週期匯入器；07-16需用受控operator adapter完成跨來源matching與supersession | High | High | High | M | High duplicate/statement risk | previewable card re-import contract、R15 identity rules | High | G2, G3, G8 |
 | R8 | Later | legacy／typed schema與money語意雙軌 | Medium | Low | High | L | High migration | stable business flow＋compatibility evidence | Low | G1, G8 |
 | R9 | Later | 大型UI／query模組責任集中 | Medium | Low | High | L | Medium regression | actual flow pain＋characterization | High | G8 |
 | R10 | Later / Needs owner decision | 已有backup health與policy worksheet；缺實際排程、retention、RPO／RTO、restore drill與graceful shutdown | High | Low | High | M | High recovery | actual operations need＋owner policy | Medium | G6, G8 |
@@ -36,7 +37,7 @@ Last validated against repository: 2026-07-16
 
 - **完成證據：** `lib/queries/reports/balance-sheet.js`、API route、`BalanceSheet.jsx`、`balance-sheet-contract.md`與`test/reporting-three-view.test.js`。
 - **已關閉風險：** Account snapshot優先、完整holding fallback、tier-2 valuation、FX／source／snapshot watermarks、missing／stale blockers與derived net worth均由server read model提供；current debt不由original principal或schedule猜測。
-- **仍不宣稱：** 正式DB已發布v10，但真實position coverage仍因missing current card balance與stale cash snapshot為partial；R4實作完成不等於owner已取得complete balance sheet。
+- **Real-data closure（2026-07-16）：** 已在可驗證備份與副本演練後，加入國泰current-liability與台新same-date cash snapshot；正式Balance Sheet現在為`complete`、equation delta 0、blockers 0。這只關閉當前position缺口，不會補出歷史cash boundaries，也不代表owner已接受所有分類。精確私人金額只存在ignored evidence zone。
 
 ### R6 — 缺runtime forecast／safe-to-spend／alerts
 
@@ -67,6 +68,13 @@ Last validated against repository: 2026-07-16
 - **語意限制：** `source_conflicts`適用於兩個互斥來源由人選一個；此處是官方source與derived rows間的轉換缺口，選source不會修復transactions，因此目前正式conflict count保持0。
 - **Recommended：** 先建立可preview、可逐筆diff、可reversal的card transaction repair／re-import contract；以官方statement totals與row identity驗證，不直接SQL修補。
 - **驗證：** 每期items合計等於官方statement total、credits／installments保持正確符號與timeline、re-import idempotent、P&L不重複、payment match唯一且完整。
+
+### R16 — Current／unbilled卡片生命週期尚缺正式匯入器
+
+- **問題／證據：** 07-16國泰匯出含92筆未出帳與10筆即時授權；其中72筆已存在於07-08舊快照。現有typed cash-activity API能建立新列，但dedupe包含`source_key`，沒有公開的「跨來源比對既有交易、補source link、將舊快照標為superseded、把未出帳改為posted／released」完整操作。因此本次只能以先備份、在副本演練、逐列audit log的受控operator adapter完成。
+- **影響：** 07-19正式帳單若直接視為新source逐筆建立，可能重複計算92筆未出帳或保留10筆已解除授權；這會污染P&L與卡片曝險。
+- **Recommended：** 在匯入07月正式帳單前，建立previewable／idempotent card statement replacement contract。Identity至少使用statement account、transaction date、normalized merchant、signed amount、occurrence ordinal與必要的card／mobile-card hints；ambiguous rows必須產生review item，不可自動合併。
+- **驗證：** 07-16來源可在副本重放為0新增；07月posted statement能明確產生matched／new／reversed-or-released／ambiguous清單；commit後未出帳來源superseded、posted totals精確對帳、交易不重複，reversal可恢復。
 
 ### R8 — Legacy／typed schema雙軌
 

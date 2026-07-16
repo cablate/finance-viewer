@@ -1054,7 +1054,7 @@ KPI 不只量「使用者有沒有打開 App」，而要證明它真的提早揭
 
 **Verdict：Planning Ready；runtime execution尚未啟動。** `FC-1`至`FC-3`在下列Foundation Real-Data Acceptance Gate通過後可依序實作；`FC-4`之後刻意保留owner policy decision，現在不能假裝execution-ready。
 
-已確認的技術基線：repository code與正式DB均為schema v10；12個named analysis datasets、proposal envelope、unified review workbench、三張management reports、readiness、preview／commit、browser confirmation、backup／restore、synthetic Control fixture與pure cash projector均存在。2026-07-16正式資料庫postflight為1,078筆交易、24個來源與13個帳戶；card profile／statement／payment、3筆liability、2筆commitment、investment／FX、valued items與1筆proposed reimbursement已進入typed foundation。v6→v9與v9→v10都先backup、在還原副本演練，再正式升級並驗證交易雜湊、integrity與FK。仍缺owner scope attestations、部分cash boundaries、當前card balance、loan allocations及歷史card normalization closure，因此不可把Control UI接成完整真實結論。
+已確認的技術基線：repository code與正式DB均為schema v10；12個named analysis datasets、proposal envelope、unified review workbench、三張management reports、readiness、preview／commit、browser confirmation、backup／restore、synthetic Control fixture與pure cash projector均存在。Migration postflight原為1,078筆交易、24個來源與13個帳戶；07-16晚間在新備份與副本演練後補入國泰provisional明細與國泰／台新同日快照，正式DB現為1,108筆交易、28個來源、13個帳戶與12個balance snapshots。Card profile／statement／payment、3筆liability、2筆commitment、investment／FX、valued items與1筆proposed reimbursement已進入typed foundation。v6→v9、v9→v10及晚間real-data write都先backup／rehearsal並驗證integrity與FK。當前Balance Sheet已complete；仍缺owner scope attestations、部分歷史cash boundaries、loan allocations及歷史card normalization closure，因此不可把Control UI接成完整真實結論。
 
 ### 17.2 Foundation Real-Data Acceptance Gate
 
@@ -1062,11 +1062,11 @@ KPI 不只量「使用者有沒有打開 App」，而要證明它真的提早揭
 
 | Gate | 通過條件 | 現況 |
 |---|---|---|
-| GATE-F1 DB安全 | 正式寫入前有可驗證backup；migration後integrity=`ok`、0 FK violations、legacy交易數不減 | **Passed**：兩段正式migration皆先backup／restore rehearsal；正式v10保留1,078筆交易與交易雜湊，integrity=`ok`、0 FK violations |
+| GATE-F1 DB安全 | 正式寫入前有可驗證backup；migration後integrity=`ok`、0 FK violations、legacy交易數不減 | **Passed**：兩段正式migration皆先backup／restore rehearsal；正式v10保留1,078筆交易與交易雜湊。07-16 real-data write另先建立並驗證schema v10備份、在副本演練，寫入後為1,108筆交易，integrity=`ok`、0 FK violations |
 | GATE-F2 帳戶範圍 | cash accounts、credit cards、liabilities、investments、valued items都有`declared_complete`或明確excluded note | **Owner action pending**：typed inventory已存在，但五類scope必須由browser-bound human confirmation聲明；AI不可代按 |
-| GATE-F3 當前位置 | 每個納入帳戶有dated balance／principal／holding／valuation；FX缺口不被當0 | **Partial**：正式Balance Sheet可執行且equation delta為0；目前仍具名揭露missing current card balance與stale cash snapshot，不以0補值 |
+| GATE-F3 當前位置 | 每個納入帳戶有dated balance／principal／holding／valuation；FX缺口不被當0 | **Passed for 2026-07-16 position**：國泰current-liability與台新same-date cash snapshot已補；正式Balance Sheet為complete、equation delta 0、blockers 0。這不代表歷史cash boundary已補齊；精確私人金額只存在ignored evidence zone |
 | GATE-F4 義務資料 | 卡片、貸款與固定義務至少具官方或user-confirmed的目前狀態；未知schedule保持partial | **Passed with disclosed gaps**：1 card profile／exact statement／payment match、3 liabilities與2 commitments已typed；未知loan starts、estimated principal與未提供schedule／allocation保持partial |
-| GATE-F5 AI業務閉環 | AI可完成preflight→preview→commit→postflight；高風險項由UI確認，無直接SQLite修補 | **Passed on operator/system side**：正式小批card／liability／commitment write與reimbursement proposal均走typed API及postflight；工作台保留1筆actionable proposal與20筆owner-unresolved，不直接SQLite修補 |
+| GATE-F5 AI業務閉環 | AI可完成preflight→preview→commit→postflight；高風險項由UI確認，無直接SQLite修補 | **Passed for existing typed flows；card lifecycle maintenance open**：正式card／liability／commitment write與reimbursement proposal走typed API及postflight；工作台保留1筆actionable proposal與20筆owner-unresolved。07-16重複未出帳來源另暴露current／unbilled→posted跨來源matching API缺口，已記為R16，必須在07月正式帳單匯入前產品化 |
 | GATE-F6 Owner acceptance | Owner明確表示常用資料已能以AI主輸入、UI少量確認完成，並接受仍列出的known gaps | 未通過 |
 
 Gate evidence只記錄aggregate counts、readiness、watermarks與known gaps，不把私人帳戶金額寫入tracked Markdown。

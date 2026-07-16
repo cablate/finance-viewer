@@ -10,13 +10,15 @@ Last validated against repository: 2026-07-16
 
 Post-audit closure addendum（2026-07-16）：repository code與正式DB已到schema v10，完成reimbursement owner、obligation reversal lifecycle、versioned transfer decisions、12個governed analysis datasets、proposal envelope、unified impact review workbench、server-backed management P&L／Balance Sheet／Cash Flow，以及source-conflict review context。正式v6→v9與v9→v10都先建立可驗證backup、在temporary restore演練，再執行formal migration；1,078筆交易與交易雜湊保持不變，`integrity_check=ok`、0 FK violations。代表性card／liability／commitment facts與1筆reimbursement proposal已透過typed APIs進入正式DB。最新證據包含Node suite 199/199、Skill eval 17/17、Chromium 5/5、production audit／build／runtime／privacy／backup restore全部通過。剩餘gate僅為owner scope／proposal confirmation與GATE-F6 acceptance；2026-07-15與本輪早期的v6／v9數量只保留作historical ledger，目前truth以本addendum、`CURRENT-STATUS.md`與active contracts為準。
 
+Real-data position addendum（2026-07-16晚間）：在新schema v10備份與副本演練通過後，正式匯入92筆國泰未出帳（72筆連結既有經濟事件、20筆新增）及10筆即時授權，並補國泰current-liability與台新same-date cash snapshot。正式DB現為1,108 transactions、28 sources、12 balance snapshots；`integrity_check=ok`、0 FK violations。Balance Sheet由缺current card balance的partial提升為`complete`且blockers 0；cash flow仍因歷史cash boundaries與mapping／matching不足維持partial。精確私人金額只保存在ignored intake文件與正式DB。
+
 ## Executive conclusion
 
 **Confirmed：** Last Say已超過單純帳單分類器。它是local-first、single-user、localhost財務事實與審查平台：保留legacy交易學習與management P&L，同時具備typed accounts、sources、balances、cards、liabilities、commitments、investments、valuations、reconciliation、review、readiness與governed analysis contexts。
 
 **Confirmed：** Financial Data Foundation Phase 0–7 release line與2026-07-15 trust stabilization構成baseline；2026-07-16再完成AI proposal→typed human review→three-view reporting與正式v10 real-data closure。系統與operator發布gate已通過，MP-07只剩不能由AI代做的owner confirmation與acceptance。
 
-**Confirmed：** 整體產品仍未抵達長期終點。Formal management Balance Sheet／Cash Flow已實作，但真實coverage仍partial；foundation-to-forecast runtime adapter、safe-to-spend、alerts與scenario lifecycle尚未實作。`projectCashTimeline`仍只對explicit synthetic inputs計算，不能被描述為使用者現有財務預測。
+**Confirmed：** 整體產品仍未抵達長期終點。Formal management Balance Sheet／Cash Flow已實作；07-16 Balance Sheet已complete，但Cash Flow與部分歷史P&L／reconciliation仍partial。Foundation-to-forecast runtime adapter、safe-to-spend、alerts與scenario lifecycle尚未實作。`projectCashTimeline`仍只對explicit synthetic inputs計算，不能被描述為使用者現有財務預測。
 
 **Owner direction recorded after audit（2026-07-15）：** AI是主要輸入方式，UI負責確認與少量修正；目前先讓foundation業務流程完整跑順，Financial Control Center排在下一階段並只能消費foundation。Reserve／reliable income與其他優化延後到真正需要時，不是current blocker。
 
@@ -42,7 +44,7 @@ Post-audit closure addendum（2026-07-16）：repository code與正式DB已到sc
 
 ### 隱私邊界
 
-沒有讀取`data/`、`uploads/`、`outputs/`或statement files中的真實財務內容。所有新tests與browser flows使用synthetic／anonymous isolated DB。release privacy gate現在掃描tracked與untracked、未被Git ignore的`.js`／`.jsx`／`.mjs`／`.json`／`.md`。
+原始repository audit沒有讀取`data/`、`uploads/`、`outputs/`或statement files中的真實財務內容；所有新tests與browser flows使用synthetic／anonymous isolated DB。2026-07-16晚間的owner-authorized real-data operation則明確讀取兩份國泰CSV並更新ignored private DB／intake文件，沒有把金額或原始檔加入Git。Release privacy gate掃描tracked與untracked、未被Git ignore的`.js`／`.jsx`／`.mjs`／`.json`／`.md`。
 
 ### 分析工具
 
@@ -94,7 +96,7 @@ Post-audit closure addendum（2026-07-16）：repository code與正式DB已到sc
 - **Confirmed current：** management P&L、Balance Sheet與direct-method Cash Flow皆是正式server-backed能力，並共用coverage／blocker／drillback呈現。
 - **Original issue：** Balance Sheet／Cash Flow曾與P&L並列顯示static readiness claims；不是硬編碼財務金額，但仍可能誤導成熟度，且文字落後foundation。
 - **Resolved：** `lib/queries/reports/{balance-sheet,cash-flow}.js`、對應routes與React consumers已實作；typed transfer、settlement、loan allocation、investment與reimbursement ownership有cross-view tests，React不自行加總語意。
-- **Remaining gap：** 正式migration已完成，仍需owner acceptance；真實報表因缺少部分boundary、current card balance、loan／transfer matches與歷史card normalization closure而維持partial／unreconciled。這是資料coverage，不是程式把未知補成0。
+- **Remaining gap：** 正式migration已完成，仍需owner acceptance；current card balance與台新當前快照已補齊，因此Balance Sheet已complete。Cash Flow與歷史P&L／reconciliation仍因部分boundary、loan／transfer matches及歷史card normalization closure而維持partial／unreconciled。這是資料coverage，不是程式把未知補成0。
 
 ### F4 — Data Center UI／backend落差
 
@@ -206,7 +208,7 @@ Post-audit closure addendum（2026-07-16）：repository code與正式DB已到sc
 | anonymous backup→new-path restore | PASS | integrity=`ok`、0 FK violations、schema 9、180 transactions、34 change-evidence rows |
 | real DB-only backup check | PASS | schema v6與v9兩個升級前manifest均驗hash／freshness／integrity／FK；bundles ignored且未追蹤 |
 | real backup temporary migration rehearsal | PASS | 全新OS temp copies分別完成v6→v9與v9→v10；交易數／hash保留、integrity=`ok`、0 FK violations |
-| formal DB migration／postflight | PASS | schema v10 ledger `1..10`、1,078 transactions、integrity=`ok`、0 FK violations；三張reports與workbench可查詢 |
+| formal DB migration／postflight | PASS | migration時schema v10 ledger `1..10`、1,078 transactions保留；晚間real-data update後1,108 transactions、28 sources、12 snapshots，integrity=`ok`、0 FK violations；Balance Sheet complete，Cash Flow partial |
 | screenshots | PASS | 3份committed anonymous screenshots存在且非空 |
 | Markdown inventory／links／fences | PASS | 74個current Markdown files；missing relative links 0、unbalanced fences 0 |
 | `git diff --check` | PASS | 0 whitespace error；package files只有既有line-ending warning，非diff error |
